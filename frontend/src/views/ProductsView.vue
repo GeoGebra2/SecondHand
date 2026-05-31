@@ -60,6 +60,15 @@
               >
                 {{ isSubmitting(product) ? '下单中...' : orderButtonText(product) }}
               </button>
+
+              <button
+                class="secondary-btn"
+                style="margin-left: 8px; background-color: #f59e0b; color: white; border: none;"
+                type="button"
+                @click="handleMyFavorite(product.product_id)"
+              >
+                ⭐ 收藏
+              </button>
             </td>
           </tr>
           <tr v-if="!products.length && !loading">
@@ -99,6 +108,30 @@ function formatProductStatus(status) {
       OFFLINE: '已下架',
     }[status] || status
   )
+}
+
+// 【新增：处理用户点击收藏按钮的逻辑】
+async function handleMyFavorite(productId) {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/my_task/favorite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: authState.user?.user_id || 1, // 如果登录了用真实ID，未登录默认用1号用户测试
+        product_id: productId
+      })
+    })
+    const data = await response.json()
+    if (data.status === 'success') {
+      alert('🌟 收藏成功！数据已成功写入 MySQL favorite 表！')
+    } else {
+      alert('收藏失败：' + (data.detail || '未知错误'))
+    }
+  } catch (error) {
+    alert('网络请求失败，请确保 FastAPI 后端正在运行！')
+  }
 }
 
 function formatPrice(price) {

@@ -83,6 +83,29 @@
           </div>
         </form>
       </article>
+
+      <article class="section-card" style="margin-top: 20px; grid-column: 1 / -1;">
+        <h3>⭐ 我的收藏夹 (真实数据库联动)</h3>
+        <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">
+          从 MySQL 数据库的 favorite 表实时读取你收藏的商品编号。
+        </p>
+        
+        <div v-if="myFavorites.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
+          空空如也，快去商品大厅收藏点东西吧！
+        </div>
+        
+        <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+          <div v-for="fav in myFavorites" :key="fav.favorite_id" 
+              style="background: #fff; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h4 style="margin: 0 0 8px 0; color: #f59e0b;">⭐ 收藏成功</h4>
+            <p style="margin: 5px 0; font-size: 14px;">商品编号 (ID): <strong>{{ fav.product_id }}</strong></p>
+            <small style="color: #999; font-size: 11px;">
+              时间: {{ new Date(fav.create_time).toLocaleDateString() }}
+            </small>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 </template>
@@ -146,4 +169,21 @@ onMounted(async () => {
   }
   syncForm()
 })
+
+
+const myFavorites = ref([])
+
+onMounted(async () => {
+  try {
+    // 默认请求当前登录用户（假设ID为1）的收藏数据
+    const res = await fetch('http://127.0.0.1:8000/my_task/favorites/1')
+    const data = await res.json()
+    if (data.status === 'success') {
+      myFavorites.value = data.data
+    }
+  } catch (error) {
+    console.error('无法连接到后端，请检查 FastAPI 服务是否启动', error)
+  }
+})
+
 </script>
