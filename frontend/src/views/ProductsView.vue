@@ -2,32 +2,35 @@
   <section class="page">
     <div class="panel">
       <h2>商品大厅</h2>
-      <p>这里预留商品搜索、分类筛选、排序和商品卡片列表区域。</p>
+      <p class="muted-text">浏览在售商品，并直接发起订单创建。下单后商品会进入锁定状态，等待卖家确认。</p>
     </div>
 
     <div class="grid-2">
       <article class="section-card">
-        <h3>筛选区域</h3>
+        <h3>交易说明</h3>
         <ul class="list">
-          <li>关键字搜索</li>
-          <li>商品分类筛选</li>
-          <li>价格区间筛选</li>
-          <li>发布时间 / 热度排序</li>
+          <li>只有登录用户可创建订单。</li>
+          <li>买家不能购买自己发布的商品。</li>
+          <li>商品下单后会先锁定，避免重复购买。</li>
+          <li>完成面交后请在订单页确认成交并评价。</li>
         </ul>
       </article>
 
       <article class="section-card">
-        <h3>推荐区域</h3>
-        <ul class="list">
-          <li>猜你喜欢</li>
-          <li>近期热门</li>
-          <li>收藏较多商品</li>
-        </ul>
+        <h3>当前状态</h3>
+        <p class="muted-text">演示账号可直接体验完整流程：浏览商品 -> 创建订单 -> 进入订单页跟进。</p>
+        <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
+        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
       </article>
     </div>
 
     <div class="table-card">
-      <h3>商品列表示例</h3>
+      <div class="table-header">
+        <h3>商品列表</h3>
+        <button class="secondary-btn" :disabled="loading" type="button" @click="loadProducts">
+          {{ loading ? '刷新中...' : '刷新商品' }}
+        </button>
+      </div>
       <table class="data-table">
         <thead>
           <tr>
@@ -36,15 +39,31 @@
             <th>价格</th>
             <th>卖家</th>
             <th>状态</th>
+            <th>交易地点</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in products" :key="product.title">
+          <tr v-for="product in products" :key="product.product_id">
             <td>{{ product.title }}</td>
-            <td>{{ product.category }}</td>
-            <td>{{ product.price }}</td>
-            <td>{{ product.seller }}</td>
-            <td><span class="tag">{{ product.status }}</span></td>
+            <td>{{ product.category_name }}</td>
+            <td>{{ formatPrice(product.price) }}</td>
+            <td>{{ product.seller_name }}</td>
+            <td><span class="tag">{{ formatProductStatus(product.status) }}</span></td>
+            <td>{{ product.trade_location }}</td>
+            <td>
+              <button
+                class="primary-btn"
+                :disabled="isSubmitting(product) || !canCreateOrder(product)"
+                type="button"
+                @click="handleCreateOrder(product)"
+              >
+                {{ isSubmitting(product) ? '下单中...' : orderButtonText(product) }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!products.length && !loading">
+            <td colspan="7" class="muted-text">暂无商品数据</td>
           </tr>
         </tbody>
       </table>
@@ -53,9 +72,95 @@
 </template>
 
 <script setup>
-const products = [
-  { title: '高等数学教材', category: '教材资料', price: '25 元', seller: '张同学', status: '在售' },
-  { title: '二手机械键盘', category: '数码产品', price: '120 元', seller: '李同学', status: '待面交' },
-  { title: '宿舍折叠自行车', category: '生活用品', price: '260 元', seller: '王同学', status: '已收藏' },
-]
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+import { createOrder } from '../api/orders'
+import { fetchProducts } from '../api/products'
+import { useAuth } from '../composables/useAuth'
+
+const router = useRouter()
+const { authState } = useAuth()
+
+const products = ref([])
+const loading = ref(false)
+const submittingProductId = ref(null)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+const isAuthenticated = computed(() => Boolean(authState.token))
+
+function formatProductStatus(status) {
+  return (
+    {
+      ON_SALE: '在售',
+      LOCKED: '已锁定',
+      SOLD: '已售出',
+      OFFLINE: '已下架',
+    }[status] || status
+  )
+}
+
+function formatPrice(price) {
+  return `${Number(price).toFixed(2)} 元`
+}
+
+function canCreateOrder(product) {
+  if (!isAuthenticated.value) {
+    return false
+  }
+  if (authState.user?.user_id === product.seller_id) {
+    return false
+  }
+  return product.status === 'ON_SALE'
+}
+
+function orderButtonText(product) {
+  if (!isAuthenticated.value) {
+    return '请先登录'
+  }
+  if (authState.user?.user_id === product.seller_id) {
+    return '自己发布'
+  }
+  return product.status === 'ON_SALE' ? '立即下单' : '不可下单'
+}
+
+function isSubmitting(product) {
+  return submittingProductId.value === product.product_id
+}
+
+async function loadProducts() {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    products.value = await fetchProducts()
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '获取商品列表失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleCreateOrder(product) {
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  if (!isAuthenticated.value) {
+    router.push({ path: '/login', query: { redirect: '/products' } })
+    return
+  }
+
+  submittingProductId.value = product.product_id
+  try {
+    await createOrder({ product_id: product.product_id, buyer_note: '期待尽快线下交易' })
+    successMessage.value = `已为商品“${product.title}”创建订单，请前往订单页继续操作。`
+    await loadProducts()
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '创建订单失败'
+  } finally {
+    submittingProductId.value = null
+  }
+}
+
+onMounted(loadProducts)
 </script>

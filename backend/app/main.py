@@ -1,7 +1,9 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -13,7 +15,18 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    last_error: Exception | None = None
+    for _ in range(10):
+        try:
+            Base.metadata.create_all(bind=engine)
+            last_error = None
+            break
+        except SQLAlchemyError as exc:
+            last_error = exc
+            await asyncio.sleep(2)
+
+    if last_error is not None:
+        raise last_error
     yield
 
 

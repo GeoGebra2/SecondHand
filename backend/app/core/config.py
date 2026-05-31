@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_version: str = Field(default='0.1.0')
     cors_origins: List[str] = Field(default_factory=lambda: ['http://localhost:5173'])
     database_url: str = Field(
-        default='mysql+pymysql://secondhand_user:secondhand123@127.0.0.1:3307/secondhand'
+        default='mysql+pymysql://secondhand_user:secondhand123@127.0.0.1:3307/secondhand?charset=utf8mb4'
     )
     jwt_secret_key: str = Field(default='change_me')
     jwt_algorithm: str = Field(default='HS256')

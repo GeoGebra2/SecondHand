@@ -1,0 +1,185 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session
+
+from app.models.order_info import OrderInfo
+from app.models.product import Product
+from app.models.review import Review
+from app.models.user import User
+from app.schemas.order import OrderCreateRequest, OrderResponse, OrderStatusResponse
+
+
+class OrderService:
+    def list_orders(self, db: Session, user: User) -> list[OrderResponse]:
+        orders = db.scalars(
+            select(OrderInfo)
+            .where(or_(OrderInfo.buyer_id == user.user_id, OrderInfo.seller_id == user.user_id))
+            .order_by(OrderInfo.create_time.desc())
+        ).all()
+
+        if not orders:
+            return []
+
+        product_ids = {order.product_id for order in orders}
+        user_ids = {order.buyer_id for order in orders} | {order.seller_id for order in orders}
+        reviewed_order_ids = set(
+            db.scalars(select(Review.order_id).where(Review.order_id.in_([order.order_id for order in orders]))).all()
+        )
+        products = {
+            product.product_id: product
+            for product in db.scalars(select(Product).where(Product.product_id.in_(product_ids))).all()
+        }
+        users = {
+            member.user_id: member
+            for member in db.scalars(select(User).where(User.user_id.in_(user_ids))).all()
+        }
+
+        return [self._build_order_response(order, products, users, reviewed_order_ids, user) for order in orders]
+
+    def create_order(self, db: Session, buyer: User, payload: OrderCreateRequest) -> OrderResponse:
+        product = db.get(Product, payload.product_id)
+        if product is None:
+            raise ValueError('商品不存在')
+        if product.seller_id == buyer.user_id:
+            raise ValueError('不能购买自己发布的商品')
+        if product.status != 'ON_SALE':
+            raise ValueError('当前商品不可下单')
+
+        seller = db.get(User, product.seller_id)
+        if seller is None or seller.status != 'active':
+            raise ValueError('卖家当前不可交易')
+
+        order = OrderInfo(
+            product_id=product.product_id,
+            buyer_id=buyer.user_id,
+            seller_id=product.seller_id,
+            order_amount=product.price,
+            order_status='PENDING',
+            trade_method='offline',
+            trade_location=product.trade_location,
+            buyer_note=payload.buyer_note,
+        )
+        product.status = 'LOCKED'
+        db.add(order)
+        db.add(product)
+        db.commit()
+        db.refresh(order)
+        db.refresh(product)
+        return self._build_order_response(
+            order,
+            {product.product_id: product},
+            {buyer.user_id: buyer, seller.user_id: seller},
+            set(),
+            buyer,
+        )
+
+    def confirm_order(self, db: Session, order_id: int, user: User) -> OrderStatusResponse:
+        order = self._get_order_or_raise(db, order_id)
+        if order.seller_id != user.user_id:
+            raise PermissionError('只有卖家可以确认订单')
+        if order.order_status != 'PENDING':
+            raise ValueError('当前订单状态无法确认')
+
+        order.order_status = 'IN_PROGRESS'
+        db.add(order)
+        db.commit()
+        product = self._get_product_or_raise(db, order.product_id)
+        return OrderStatusResponse(
+            order_id=order.order_id,
+            order_status=order.order_status,
+            product_status=product.status,
+        )
+
+    def complete_order(self, db: Session, order_id: int, user: User) -> OrderStatusResponse:
+        order = self._get_order_or_raise(db, order_id)
+        if order.buyer_id != user.user_id:
+            raise PermissionError('只有买家可以确认成交')
+        if order.order_status != 'IN_PROGRESS':
+            raise ValueError('当前订单状态无法完成')
+
+        product = self._get_product_or_raise(db, order.product_id)
+        order.order_status = 'COMPLETED'
+        order.finish_time = datetime.now(timezone.utc)
+        product.status = 'SOLD'
+        db.add(order)
+        db.add(product)
+        db.commit()
+        return OrderStatusResponse(
+            order_id=order.order_id,
+            order_status=order.order_status,
+            product_status=product.status,
+        )
+
+    def cancel_order(self, db: Session, order_id: int, user: User, cancel_reason: str | None) -> OrderStatusResponse:
+        order = self._get_order_or_raise(db, order_id)
+        if user.user_id not in {order.buyer_id, order.seller_id}:
+            raise PermissionError('只有交易双方可以取消订单')
+        if order.order_status in {'COMPLETED', 'CANCELLED'}:
+            raise ValueError('当前订单不可取消')
+
+        product = self._get_product_or_raise(db, order.product_id)
+        order.order_status = 'CANCELLED'
+        order.cancel_reason = cancel_reason or '用户主动取消订单'
+        product.status = 'ON_SALE'
+        db.add(order)
+        db.add(product)
+        db.commit()
+        return OrderStatusResponse(
+            order_id=order.order_id,
+            order_status=order.order_status,
+            product_status=product.status,
+        )
+
+    def get_order(self, db: Session, order_id: int) -> OrderInfo:
+        return self._get_order_or_raise(db, order_id)
+
+    def _get_order_or_raise(self, db: Session, order_id: int) -> OrderInfo:
+        order = db.get(OrderInfo, order_id)
+        if order is None:
+            raise ValueError('订单不存在')
+        return order
+
+    def _get_product_or_raise(self, db: Session, product_id: int) -> Product:
+        product = db.get(Product, product_id)
+        if product is None:
+            raise ValueError('商品不存在')
+        return product
+
+    def _build_order_response(
+        self,
+        order: OrderInfo,
+        products: dict[int, Product],
+        users: dict[int, User],
+        reviewed_order_ids: set[int],
+        current_user: User,
+    ) -> OrderResponse:
+        product = products[order.product_id]
+        buyer = users[order.buyer_id]
+        seller = users[order.seller_id]
+        return OrderResponse(
+            order_id=order.order_id,
+            product_id=order.product_id,
+            product_title=product.title,
+            buyer_id=order.buyer_id,
+            buyer_name=buyer.user_name,
+            seller_id=order.seller_id,
+            seller_name=seller.user_name,
+            order_amount=order.order_amount,
+            order_status=order.order_status,
+            trade_method=order.trade_method,
+            trade_location=order.trade_location,
+            buyer_note=order.buyer_note,
+            cancel_reason=order.cancel_reason,
+            create_time=order.create_time,
+            update_time=order.update_time,
+            finish_time=order.finish_time,
+            can_review=(
+                current_user.user_id == order.buyer_id
+                and order.order_status == 'COMPLETED'
+                and order.order_id not in reviewed_order_ids
+            ),
+        )
+
+
+service = OrderService()
