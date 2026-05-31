@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `user` (
+  `user_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `student_no` VARCHAR(20) NOT NULL UNIQUE,
+  `user_name` VARCHAR(50) NOT NULL,
+  `gender` VARCHAR(10) NULL,
+  `phone` VARCHAR(20) NULL,
+  `email` VARCHAR(100) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(20) NOT NULL DEFAULT 'student',
+  `credit_score` INT NOT NULL DEFAULT 100,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'active',
+  `verify_status` VARCHAR(20) NOT NULL DEFAULT 'verified',
+  `avatar_url` VARCHAR(255) NULL,
+  `bio` VARCHAR(255) NULL,
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_login_time` DATETIME NULL,
+  INDEX `idx_user_status` (`status`),
+  INDEX `idx_user_verify_status` (`verify_status`)
+);

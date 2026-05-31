@@ -1,9 +1,11 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 
 class ApiResponse(BaseModel):
     message: str
-    data: dict | list | None = None
+    data: Any = None
 
 
 class OverviewCard(BaseModel):

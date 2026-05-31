@@ -11,7 +11,15 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
+import { useAuth } from './composables/useAuth'
+
+const { initializeAuth } = useAuth()
+
+onMounted(() => {
+  initializeAuth()
+})
 </script>

@@ -13,9 +13,44 @@
 
 ```text
 SecondHand/
+├─ database/                 # MySQL 初始化脚本
 ├─ frontend/
 ├─ backend/
+├─ docker-compose.yml        # 一键启动数据库
 └─ README.md
+```
+
+## 数据库启动
+
+项目仓库内已经包含统一的 MySQL 初始化文件，团队成员可以直接使用同一套数据库结构和演示数据。
+
+```bash
+docker compose up -d mysql
+```
+
+启动后可使用以下连接信息：
+
+- 主机：`127.0.0.1`
+- 端口：`3307`
+- 数据库：`secondhand`
+- 用户名：`secondhand_user`
+- 密码：`secondhand123`
+
+数据库会自动导入以下内容：
+
+- 用户认证表结构：`database/mysql/init/01_auth_user.sql`
+- 演示账号数据：`database/mysql/init/02_auth_seed.sql`
+
+演示账号：
+
+- 学生账号：`student@campus.edu` / `student123`
+- 管理员账号：`admin@campus.edu` / `admin12345`
+
+后端启动前，建议先复制环境变量模板：
+
+```bash
+cd backend
+copy .env.example .env
 ```
 
 ## 前端启动

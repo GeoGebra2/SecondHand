@@ -1,0 +1,42 @@
+INSERT INTO `user` (
+  `student_no`,
+  `user_name`,
+  `gender`,
+  `phone`,
+  `email`,
+  `password_hash`,
+  `role`,
+  `credit_score`,
+  `status`,
+  `verify_status`,
+  `avatar_url`,
+  `bio`
+) VALUES
+(
+  '2023001001',
+  '演示学生',
+  '男',
+  '13800000001',
+  'student@campus.edu',
+  '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO',
+  'student',
+  100,
+  'active',
+  'verified',
+  NULL,
+  '用于课程演示的学生账号，明文密码：student123'
+),
+(
+  '2023000001',
+  '平台管理员',
+  '女',
+  '13800000002',
+  'admin@campus.edu',
+  '$2b$12$SiNeAziRZW2yyoQwoMrzPedLG0S189.mpwkbidbV..QC0pXUx/IxG',
+  'admin',
+  100,
+  'active',
+  'verified',
+  NULL,
+  '用于课程演示的管理员账号，明文密码：admin12345'
+);
