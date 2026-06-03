@@ -13,7 +13,7 @@
         </label>
         <label class="form-field">
           <span>分类</span>
-          <select v-model="filters.category_name">
+          <select v-model="filters.category_name" @change="loadProducts">
             <option value="">全部分类</option>
             <option v-for="category in categories" :key="category.category_id" :value="category.category_name">
               {{ category.category_name }}
@@ -22,24 +22,19 @@
         </label>
         <label class="form-field">
           <span>最低价格</span>
-          <input v-model="filters.min_price" min="0" type="number" placeholder="0" />
+          <input v-model="filters.min_price" min="0" type="number" placeholder="0" @blur="loadProducts" @keyup.enter="loadProducts" />
         </label>
         <label class="form-field">
           <span>最高价格</span>
-          <input v-model="filters.max_price" min="0" type="number" placeholder="不限" />
+          <input v-model="filters.max_price" min="0" type="number" placeholder="不限" @blur="loadProducts" @keyup.enter="loadProducts" />
         </label>
         <label class="form-field">
-          <span>排序字段</span>
-          <select v-model="filters.sort_by">
-            <option value="publish_time">发布时间</option>
-            <option value="price">价格</option>
-          </select>
-        </label>
-        <label class="form-field">
-          <span>排序方式</span>
-          <select v-model="filters.sort_order">
-            <option value="desc">降序</option>
-            <option value="asc">升序</option>
+          <span>排序规则</span>
+          <select v-model="sortRule" @change="loadProducts">
+            <option value="publish_time_desc">最新发布</option>
+            <option value="publish_time_asc">最早发布</option>
+            <option value="price_asc">价格从低到高</option>
+            <option value="price_desc">价格从高到低</option>
           </select>
         </label>
       </div>
@@ -122,14 +117,13 @@ const loading = ref(false)
 const submittingProductId = ref(null)
 const successMessage = ref('')
 const errorMessage = ref('')
+const sortRule = ref('publish_time_desc')
 
 const filters = reactive({
   keyword: '',
   category_name: '',
   min_price: '',
   max_price: '',
-  sort_by: 'publish_time',
-  sort_order: 'desc',
 })
 
 const isAuthenticated = computed(() => Boolean(authState.token))
@@ -154,9 +148,21 @@ function coverImage(product) {
 }
 
 function buildQueryParams() {
-  return Object.fromEntries(
-    Object.entries(filters).filter(([, value]) => value !== '' && value !== null && value !== undefined),
-  )
+  const [sortBy, sortOrder] = sortRule.value === 'price_asc'
+    ? ['price', 'asc']
+    : sortRule.value === 'price_desc'
+      ? ['price', 'desc']
+      : sortRule.value === 'publish_time_asc'
+        ? ['publish_time', 'asc']
+        : ['publish_time', 'desc']
+
+  return {
+    ...Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => value !== '' && value !== null && value !== undefined),
+    ),
+    sort_by: sortBy,
+    sort_order: sortOrder,
+  }
 }
 
 function canCreateOrder(product) {
@@ -209,9 +215,8 @@ async function resetFilters() {
     category_name: '',
     min_price: '',
     max_price: '',
-    sort_by: 'publish_time',
-    sort_order: 'desc',
   })
+  sortRule.value = 'publish_time_desc'
   await loadProducts()
 }
 

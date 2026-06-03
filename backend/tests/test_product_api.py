@@ -99,6 +99,21 @@ def test_list_products_supports_search_filter_price_sort_and_images(client, db_s
     assert data[0]['image_urls'] == ['https://example.com/book.jpg']
 
 
+def test_list_products_sorts_by_price_ascending_and_descending(client, db_session):
+    seller = create_user(db_session)
+    create_product(db_session, seller.user_id, title='低价商品', price=Decimal('12.00'))
+    create_product(db_session, seller.user_id, title='高价商品', price=Decimal('99.00'))
+    create_product(db_session, seller.user_id, title='中价商品', price=Decimal('35.00'))
+
+    asc_response = client.get('/api/products', params={'sort_by': 'price', 'sort_order': 'asc'})
+    desc_response = client.get('/api/products', params={'sort_by': 'price', 'sort_order': 'desc'})
+
+    assert asc_response.status_code == 200
+    assert desc_response.status_code == 200
+    assert [item['title'] for item in asc_response.json()['data']] == ['低价商品', '中价商品', '高价商品']
+    assert [item['title'] for item in desc_response.json()['data']] == ['高价商品', '中价商品', '低价商品']
+
+
 def test_create_product_persists_category_and_images(client, db_session):
     seller = create_user(db_session)
     headers = login_and_get_headers(client, seller.student_no)
