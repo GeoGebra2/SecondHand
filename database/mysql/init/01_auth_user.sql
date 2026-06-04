@@ -21,6 +21,18 @@ CREATE TABLE IF NOT EXISTS `user` (
   INDEX `idx_user_verify_status` (`verify_status`)
 );
 
+CREATE TABLE IF NOT EXISTS `category` (
+  `category_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `category_name` VARCHAR(50) NOT NULL UNIQUE,
+  `description` VARCHAR(255) NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_category_name` (`category_name`),
+  INDEX `idx_category_status` (`status`)
+);
+
 CREATE TABLE IF NOT EXISTS `product` (
   `product_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `seller_id` BIGINT NOT NULL,
@@ -34,8 +46,22 @@ CREATE TABLE IF NOT EXISTS `product` (
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_product_seller` (`seller_id`),
   INDEX `idx_product_status` (`status`),
+  INDEX `idx_product_category_status` (`category_name`, `status`),
+  INDEX `idx_product_price` (`price`),
   CONSTRAINT `fk_product_seller`
     FOREIGN KEY (`seller_id`) REFERENCES `user` (`user_id`)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS `product_image` (
+  `image_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `product_id` BIGINT NOT NULL,
+  `image_url` VARCHAR(500) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_product_image_product` (`product_id`),
+  CONSTRAINT `fk_product_image_product`
+    FOREIGN KEY (`product_id`) REFERENCES `product` (`product_id`)
     ON DELETE CASCADE
 );
 

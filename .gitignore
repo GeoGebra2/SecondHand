@@ -4,5 +4,7 @@ dist/
 __pycache__/
 *.pyc
 .venv/
+.conda_envs/
+.conda_pkgs/
 .env
 backend/tests/*.db

@@ -12,7 +12,7 @@ body {
   margin: 0;
 }
 
-body, button, input, textarea {
+body, button, input, textarea, select {
   font: inherit;
 }
 
@@ -199,6 +199,13 @@ button {
   margin-bottom: 14px;
 }
 
+.table-subtitle {
+  margin: 6px 0 0;
+  max-width: 280px;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .tag {
   display: inline-block;
   padding: 4px 10px;
@@ -222,6 +229,13 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .form-field {
@@ -325,16 +339,59 @@ button {
   gap: 10px;
 }
 
+.product-thumb {
+  display: block;
+  width: 72px;
+  height: 54px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.large-thumb {
+  width: 112px;
+  height: 84px;
+}
+
+.image-preview-list,
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1f2937;
+  background: #f8fafc;
+}
+
+.category-chip span {
+  color: #64748b;
+  font-size: 12px;
+}
+
 @media (max-width: 960px) {
   .app-body,
   .hero,
   .grid-3,
   .grid-2,
-  .form-grid {
+  .form-grid,
+  .filter-grid {
     grid-template-columns: 1fr;
   }
 
   .app-sidebar {
     display: none;
+  }
+
+  .table-card {
+    overflow-x: auto;
   }
 }

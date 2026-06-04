@@ -43,6 +43,16 @@ INSERT INTO `user` (
   '用于课程演示的管理员账号，明文密码：admin12345'
 );
 
+INSERT INTO `category` (
+  `category_name`,
+  `description`,
+  `sort_order`,
+  `status`
+) VALUES
+('教材资料', '课程教材、复习资料、考试笔记等', 1, 'ACTIVE'),
+('数码产品', '耳机、键盘、平板等电子设备', 2, 'ACTIVE'),
+('生活用品', '宿舍与校园生活常用物品', 3, 'ACTIVE');
+
 INSERT INTO `product` (
   `seller_id`,
   `title`,
@@ -79,3 +89,12 @@ INSERT INTO `product` (
   '宿舍楼下快递点',
   'ON_SALE'
 );
+
+INSERT INTO `product_image` (
+  `product_id`,
+  `image_url`,
+  `sort_order`
+) VALUES
+(1, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book', 0),
+(2, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Keyboard', 0),
+(3, 'https://dummyimage.com/360x240/dcfce7/047857&text=Fan', 0);
