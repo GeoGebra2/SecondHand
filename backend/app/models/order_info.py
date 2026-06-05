@@ -5,15 +5,16 @@ from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
+from app.db.types import BIGINT_ID
 
 
 class OrderInfo(Base):
     __tablename__ = 'order_info'
 
-    order_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey('product.product_id', ondelete='CASCADE'), index=True)
-    buyer_id: Mapped[int] = mapped_column(ForeignKey('user.user_id', ondelete='CASCADE'), index=True)
-    seller_id: Mapped[int] = mapped_column(ForeignKey('user.user_id', ondelete='CASCADE'), index=True)
+    order_id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    product_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey('product.product_id', ondelete='CASCADE'), index=True)
+    buyer_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey('user.user_id', ondelete='CASCADE'), index=True)
+    seller_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey('user.user_id', ondelete='CASCADE'), index=True)
     order_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     order_status: Mapped[str] = mapped_column(String(20), default='PENDING', index=True)
     trade_method: Mapped[str] = mapped_column(String(20), default='offline')
