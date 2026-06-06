@@ -71,6 +71,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+如果要重启并更新docker，需执行指令：
+```bash
+docker compose down-v
+docker composeup-dmysgl
+```
+
 ## 后续建议
 
 - 接入 MySQL 和 ORM
