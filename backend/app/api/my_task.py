@@ -2,34 +2,27 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import pymysql
-import os
+from sqlalchemy.engine import make_url
+
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/my_task", tags=["favorite"])
 
 def get_db_connection():
-    host = os.getenv("DB_HOST", "127.0.0.1")
-    port = int(os.getenv("DB_PORT", 3306))
-    user = os.getenv("DB_USER", "root")
-    password = os.getenv("DB_PASSWORD", "juZI0310") 
-    database = os.getenv("DB_NAME", "secondhand")
+    settings = get_settings()
+    url = make_url(settings.database_url)
 
-    db_url = os.getenv("DATABASE_URL")
-    if db_url and "root:" in db_url:
-        try:
-            part1 = db_url.split("://")[1] 
-            user_pass = part1.split("@")[0] 
-            password = user_pass.split(":")[1] 
-        except Exception:
-            pass 
-            
+    if not url.drivername.startswith("mysql"):
+        raise HTTPException(status_code=500, detail="my_task 接口当前仅支持 MySQL 数据库")
+
     return pymysql.connect(
-        host=host,
-        port=port,
-        user=user,
-        password=password,  
-        database=database,
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor
+        host=url.host or "127.0.0.1",
+        port=url.port or 3306,
+        user=url.username,
+        password=url.password,
+        database=url.database,
+        charset=url.query.get("charset", "utf8mb4"),
+        cursorclass=pymysql.cursors.DictCursor,
     )
 
 class FavoriteRequest(BaseModel):
