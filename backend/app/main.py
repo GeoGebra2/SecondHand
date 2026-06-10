@@ -52,3 +52,7 @@ def root() -> dict[str, str]:
 
 
 app.include_router(api_router, prefix='/api')
+
+from app.api.my_task import router as my_task_router
+
+app.include_router(my_task_router)
