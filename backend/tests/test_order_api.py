@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from app.core.security import hash_password
 from app.models.order_info import OrderInfo
-from app.models.product import Product
+from app.models.product import Category, Product
 from app.models.user import User
 
 
@@ -27,13 +27,29 @@ def create_user(db_session, **overrides):
     return user
 
 
+def create_category(db_session, **overrides):
+    payload = {
+        'category_name': '教材资料',
+        'description': '教材与复习资料',
+        'sort_order': 1,
+        'status': 'ACTIVE',
+    }
+    payload.update(overrides)
+    category = Category(**payload)
+    db_session.add(category)
+    db_session.commit()
+    db_session.refresh(category)
+    return category
+
+
 def create_product(db_session, seller_id, **overrides):
+    category = create_category(db_session)
     payload = {
         'seller_id': seller_id,
         'title': '测试商品',
         'description': '用于订单接口测试',
         'price': Decimal('66.00'),
-        'category_name': '教材资料',
+        'category_id': category.category_id,
         'trade_location': '图书馆门口',
         'status': 'ON_SALE',
     }

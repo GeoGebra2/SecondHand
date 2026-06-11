@@ -30,10 +30,10 @@ class Product(Base):
 
     product_id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
     seller_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey('user.user_id', ondelete='CASCADE'), index=True)
+    category_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey('category.category_id'), index=True)
     title: Mapped[str] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    category_name: Mapped[str] = mapped_column(String(50))
     trade_location: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(20), default='ON_SALE', index=True)
     publish_time: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

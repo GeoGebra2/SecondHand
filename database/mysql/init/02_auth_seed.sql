@@ -55,37 +55,37 @@ INSERT INTO `category` (
 
 INSERT INTO `product` (
   `seller_id`,
+  `category_id`,
   `title`,
   `description`,
   `price`,
-  `category_name`,
   `trade_location`,
   `status`
 ) VALUES
 (
   1,
+  1,
   '高等数学教材',
   '教材较新，适合大一新生复习和期末备考。',
   25.00,
-  '教材资料',
   '图书馆南门',
   'ON_SALE'
 ),
 (
   1,
+  2,
   '二手机械键盘',
   '青轴机械键盘，自带数据线，正常使用无故障。',
   120.00,
-  '数码产品',
   '一食堂门口',
   'ON_SALE'
 ),
 (
   1,
+  3,
   '宿舍小风扇',
   '支持 USB 供电，适合宿舍桌面使用。',
   35.00,
-  '生活用品',
   '宿舍楼下快递点',
   'ON_SALE'
 );

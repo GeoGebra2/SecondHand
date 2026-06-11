@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.base import Base
+from app.db.migrations import run_legacy_mysql_migrations
 from app.db.session import engine
 
 settings = get_settings()
@@ -19,6 +20,7 @@ async def lifespan(_: FastAPI):
     for _ in range(10):
         try:
             Base.metadata.create_all(bind=engine)
+            run_legacy_mysql_migrations(engine)
             last_error = None
             break
         except SQLAlchemyError as exc:
@@ -52,7 +54,3 @@ def root() -> dict[str, str]:
 
 
 app.include_router(api_router, prefix='/api')
-
-from app.api.my_task import router as my_task_router
-
-app.include_router(my_task_router)

@@ -9,40 +9,40 @@
       <article class="stats-card">
         <h3>待审核商品</h3>
         <p>等待管理员确认上架的数量</p>
-        <p class="metric-value">12</p>
+        <p class="metric-value">{{ stats.pending_product_count }}</p>
       </article>
       <article class="stats-card">
         <h3>系统总类别数</h3>
-        <p>当前平台运营 of 商品分类</p>
-        <p class="metric-value">{{ stats.categories?.length || 0 }}</p>
+        <p>当前平台启用中的商品分类数量</p>
+        <p class="metric-value">{{ stats.category_count }}</p>
       </article>
       <article class="stats-card">
         <h3>今日推荐热度</h3>
         <p>系统计算的整体大屏活跃度</p>
-        <p class="metric-value">高</p>
+        <p class="metric-value">{{ stats.recommendation_heat }}</p>
       </article>
     </div>
 
     <div class="grid-2">
       <article class="section-card">
-        <h3>🔥 热门商品类别排行</h3>
-        <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">基于后端聚合视图的实时统计</p>
+        <h3>热门商品类别排行</h3>
+        <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">基于后端聚合统计的实时结果</p>
         <div style="display: flex; flex-direction: column; gap: 15px;">
-          <div v-for="item in stats.categories" :key="item.category_name" style="display: flex; align-items: center;">
+          <div v-for="item in stats.categories" :key="item.category_id" style="display: flex; align-items: center;">
             <span style="width: 80px; font-size: 14px; font-weight: bold;">{{ item.category_name }}</span>
             <div style="background: #f0f0f0; flex: 1; height: 16px; border-radius: 8px; margin: 0 12px; overflow: hidden;">
               <div :style="{ width: (item.sales_count * 5) + '%', background: 'linear-gradient(90deg, #42b983, #2cf598)', height: '100%', transition: 'width 0.8s ease' }"></div>
             </div>
-            <span style="font-size: 13px; color: #666; width: 110px; text-align: right;">{{ item.sales_count }}热度值 (￥{{ item.total_revenue }})</span>
+            <span style="font-size: 13px; color: #666; width: 110px; text-align: right;">{{ item.sales_count }} 热度值 (￥{{ item.total_revenue }})</span>
           </div>
         </div>
       </article>
 
       <article class="section-card">
-        <h3>👑 活跃用户排行榜</h3>
+        <h3>活跃用户排行榜</h3>
         <ul class="list">
           <li v-for="(user, index) in stats.users" :key="user.user_name" style="padding: 12px 0; border-bottom: 1px dashed #eee;">
-            🥇 <span style="color: #42b983; font-weight: bold;">Top {{ index + 1 }}</span>: {{ user.user_name }} 
+            Top {{ index + 1 }}: {{ user.user_name }}
             <span style="float: right; color: #999;">活跃贡献值: <strong style="color: #3b82f6;">{{ user.action_count }}</strong> 分</span>
           </li>
         </ul>
@@ -52,19 +52,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
-// 仅保留看板统计状态变量，移除了 notifications 变量
-const stats = ref({ categories: [], users: [], trends: [] })
+import { fetchAdminDashboard } from '../api/social'
+
+const stats = ref({
+  pending_product_count: 0,
+  category_count: 0,
+  recommendation_heat: '中',
+  categories: [],
+  users: [],
+  trends: [],
+})
 
 onMounted(async () => {
   try {
-    // 仅调用后台统计分析大屏接口，彻底去除了消息接口调用
-    const statsRes = await fetch('http://127.0.0.1:8000/my_task/stats/dashboard')
-    const statsData = await statsRes.json()
-    if (statsData.status === 'success') {
-      stats.value = statsData
-    }
+    stats.value = await fetchAdminDashboard()
   } catch (error) {
     console.error('获取后端数据失败，请确认后端 uvicorn 正在运行:', error)
   }

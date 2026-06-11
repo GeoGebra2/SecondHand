@@ -36,20 +36,23 @@ CREATE TABLE IF NOT EXISTS `category` (
 CREATE TABLE IF NOT EXISTS `product` (
   `product_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `seller_id` BIGINT NOT NULL,
+  `category_id` BIGINT NOT NULL,
   `title` VARCHAR(100) NOT NULL,
   `description` TEXT NULL,
   `price` DECIMAL(10, 2) NOT NULL,
-  `category_name` VARCHAR(50) NOT NULL,
   `trade_location` VARCHAR(100) NOT NULL,
   `status` VARCHAR(20) NOT NULL DEFAULT 'ON_SALE',
   `publish_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_product_seller` (`seller_id`),
   INDEX `idx_product_status` (`status`),
-  INDEX `idx_product_category_status` (`category_name`, `status`),
+  INDEX `idx_product_category_status` (`category_id`, `status`),
   INDEX `idx_product_price` (`price`),
   CONSTRAINT `fk_product_seller`
     FOREIGN KEY (`seller_id`) REFERENCES `user` (`user_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_product_category`
+    FOREIGN KEY (`category_id`) REFERENCES `category` (`category_id`)
     ON DELETE CASCADE
 );
 

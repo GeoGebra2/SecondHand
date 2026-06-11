@@ -18,9 +18,9 @@
           </label>
           <label class="form-field">
             <span>商品分类</span>
-            <select v-model="productForm.category_name">
+            <select v-model="productForm.category_id">
               <option value="">请选择分类</option>
-              <option v-for="category in activeCategories" :key="category.category_id" :value="category.category_name">
+              <option v-for="category in activeCategories" :key="category.category_id" :value="category.category_id">
                 {{ category.category_name }}
               </option>
             </select>
@@ -179,7 +179,7 @@ const emptyProductForm = {
   title: '',
   description: '',
   price: '',
-  category_name: '',
+  category_id: '',
   trade_location: '',
 }
 
@@ -249,6 +249,7 @@ function canOffline(product) {
 function buildProductPayload() {
   return {
     ...productForm,
+    category_id: Number(productForm.category_id),
     price: String(productForm.price),
     image_urls: imageUrls.value,
   }
@@ -302,7 +303,7 @@ function editProduct(product) {
     title: product.title,
     description: product.description || '',
     price: product.price,
-    category_name: product.category_name,
+    category_id: String(product.category_id),
     trade_location: product.trade_location,
   })
   imageUrlText.value = product.image_urls?.join('\n') || ''
