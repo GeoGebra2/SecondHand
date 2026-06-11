@@ -1,6 +1,6 @@
 # 校园二手交易平台数据库管理系统
 
-这是一个基于 `Vue 3 + FastAPI + MySQL` 的校园二手交易平台数据库大作业项目，面向“校园内部二手交易”场景，已经实现了用户认证、商品管理、订单流转、评价反馈、收藏通知和后台统计等核心功能。
+这是一个基于 `Vue 3 + FastAPI + MySQL` 的校园二手交易平台数据库大作业项目，面向“校园内部二手交易”场景，已经实现了用户认证、商品管理、订单流转、评价反馈、收藏通知、智能商品推荐和后台统计等核心功能。
 
 项目重点不只是页面展示，而是通过一个真实业务场景体现数据库课程中的需求分析、关系建模、外键约束、索引设计、事务控制、统计查询与接口测试能力。
 
@@ -13,8 +13,9 @@
 - 订单创建、卖家确认、买家完成、双方取消
 - 买家评价卖家，并同步更新卖家信誉分
 - 商品收藏、个人收藏夹、站内通知提醒
+- 智能商品推荐，结合收藏、浏览、下单、类别偏好、价格区间和平台热度生成“猜你喜欢”
 - 管理后台统计，包括热门分类、活跃用户、成交趋势
-- 后端接口测试，覆盖商品、订单、评价、收藏通知等主流程
+- 后端接口测试，覆盖商品、推荐、收藏通知等主流程
 
 ## 技术栈
 
@@ -47,6 +48,7 @@ SecondHand/
 - `review`
 - `favorite`
 - `notification`
+- `browse_history`
 
 其中商品与分类采用外键设计：
 
@@ -73,12 +75,19 @@ docker compose up -d mysql
 - 表结构：`database/mysql/init/01_auth_user.sql`
 - 演示账号与种子数据：`database/mysql/init/02_auth_seed.sql`
 - 编码修复脚本：`database/mysql/init/03_fix_seed_encoding.sql`
-- 收藏与通知表：`database/mysql/init/04_my_task_tables.sql`
+- 收藏、通知与浏览记录表：`database/mysql/init/04_my_task_tables.sql`
 
 演示账号：
 
 - 学生账号：`student@campus.edu` / `student123`
 - 管理员账号：`admin@campus.edu` / `admin12345`
+
+初始化种子数据额外包含：
+
+- `6` 个演示用户
+- `6` 个商品分类
+- `54` 个商品
+- 收藏、订单、浏览记录、通知等推荐训练样本
 
 ## 后端启动
 
@@ -92,12 +101,15 @@ copy .env.example .env
 然后启动后端：
 
 ```bash
+docker compose up -d mysql
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+如果后端启动时报 `Can't connect to MySQL server on '127.0.0.1'`，通常表示 MySQL 容器尚未启动，先执行上面的 `docker compose up -d mysql`，再确认 `backend/.env` 中的 `DATABASE_URL` 使用的是 `127.0.0.1:3307`。
 
 默认接口地址：
 
@@ -152,25 +164,36 @@ npm run dev
 - `POST /api/favorites`
 - `GET /api/notifications`
 - `POST /api/notifications`
+- `GET /api/recommendations`
+- `POST /api/recommendations/browse-history`
 - `GET /api/admin/dashboard`
+
+推荐接口说明：
+
+- `GET /api/recommendations`
+  返回基于轻量级 AI 混合推荐模型生成的商品列表，并提供 `ai_score`、`ai_reason`、`ai_tags`
+- `POST /api/recommendations/browse-history`
+  记录登录用户浏览过的商品，用于后续个性化推荐
 
 ## 已验证测试
 
 在 `backend` 目录下运行：
 
 ```bash
-.venv\Scripts\python.exe -m pytest tests\test_product_api.py tests\test_order_api.py tests\test_review_api.py tests\test_social_api.py
+.venv\Scripts\python.exe -m pytest tests\test_recommendation_api.py tests\test_product_api.py tests\test_social_api.py
 ```
 
 当前结果：
 
-- `19 passed`
+- `13 passed`
 
 ## 项目亮点
 
 - 使用外键而非分类名称字符串维护商品分类关系
 - 订单状态与商品状态联动，体现事务型业务流程
 - 收藏和通知接口已并入正式鉴权体系，不再使用旁路接口
+- 新增 `browse_history` 行为表，支持基于用户行为的可解释推荐
+- 推荐模块采用“类别偏好 + 价格相似 + 热度分析 + 协同偏好”的轻量 AI 混合策略
 - 后台统计直接基于数据库聚合结果生成，不是纯前端假数据
 - 具备可演示、可测试、可写入大作业报告的完整闭环
 

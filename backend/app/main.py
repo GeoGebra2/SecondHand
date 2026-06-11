@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -28,6 +28,12 @@ async def lifespan(_: FastAPI):
             await asyncio.sleep(2)
 
     if last_error is not None:
+        if isinstance(last_error, OperationalError):
+            raise RuntimeError(
+                '无法连接到 MySQL 数据库。请先启动数据库服务，例如在项目根目录执行 '
+                '`docker compose up -d mysql`，并确认 backend/.env 中的 DATABASE_URL '
+                '与 README 中的 127.0.0.1:3307 配置一致。'
+            ) from last_error
         raise last_error
     yield
 

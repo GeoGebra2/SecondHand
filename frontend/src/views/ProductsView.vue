@@ -114,7 +114,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { createOrder } from '../api/orders'
-import { fetchCategories, fetchProducts } from '../api/products'
+import { fetchCategories, fetchProducts, recordBrowseHistory } from '../api/products'
 import { createFavorite, createNotification } from '../api/social'
 import { useAuth } from '../composables/useAuth'
 
@@ -228,6 +228,10 @@ async function loadProducts() {
   errorMessage.value = ''
   try {
     products.value = await fetchProducts(buildQueryParams())
+    if (isAuthenticated.value && products.value.length) {
+      const topVisibleProductIds = products.value.slice(0, 6).map((product) => product.product_id)
+      await recordBrowseHistory(topVisibleProductIds)
+    }
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || '获取商品列表失败'
   } finally {

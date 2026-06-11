@@ -26,3 +26,18 @@ CREATE TABLE IF NOT EXISTS `notification` (
     FOREIGN KEY (`receiver_id`) REFERENCES `user` (`user_id`)
     ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS `browse_history` (
+  `history_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  `product_id` BIGINT NOT NULL,
+  `browse_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_browse_history_user` (`user_id`),
+  INDEX `idx_browse_history_product` (`product_id`),
+  CONSTRAINT `fk_browse_history_user`
+    FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_browse_history_product`
+    FOREIGN KEY (`product_id`) REFERENCES `product` (`product_id`)
+    ON DELETE CASCADE
+);

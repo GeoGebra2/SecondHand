@@ -27,7 +27,6 @@ UPDATE `product`
 SET
   `title` = '高等数学教材',
   `description` = '教材较新，适合大一新生复习和期末备考。',
-  `category_name` = '教材资料',
   `trade_location` = '图书馆南门'
 WHERE `product_id` = 1
   AND HEX(`title`) IN (
@@ -39,7 +38,6 @@ UPDATE `product`
 SET
   `title` = '二手机械键盘',
   `description` = '青轴机械键盘，自带数据线，正常使用无故障。',
-  `category_name` = '数码产品',
   `trade_location` = '一食堂门口'
 WHERE `product_id` = 2
   AND HEX(`title`) IN (
@@ -51,7 +49,6 @@ UPDATE `product`
 SET
   `title` = '宿舍小风扇',
   `description` = '支持 USB 供电，适合宿舍桌面使用。',
-  `category_name` = '生活用品',
   `trade_location` = '宿舍楼下快递点'
 WHERE `product_id` = 3
   AND HEX(`title`) IN (
