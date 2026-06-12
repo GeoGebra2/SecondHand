@@ -5,6 +5,11 @@ export async function createFavorite(payload) {
   return response.data.data
 }
 
+export async function deleteFavorite(productId) {
+  const response = await http.delete(`/favorites/${productId}`)
+  return response.data.data
+}
+
 export async function fetchFavorites() {
   const response = await http.get('/favorites')
   return response.data.data

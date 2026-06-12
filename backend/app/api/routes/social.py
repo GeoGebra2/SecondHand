@@ -36,6 +36,20 @@ def create_favorite(
     return ApiResponse(message='收藏成功', data={'product_id': payload.product_id})
 
 
+@router.delete('/favorites/{product_id}', response_model=ApiResponse)
+def delete_favorite(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ApiResponse:
+    try:
+        social_service.remove_favorite(db, current_user, product_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return ApiResponse(message='取消收藏成功', data={'product_id': product_id})
+
+
 @router.get('/notifications', response_model=ApiResponse)
 def list_notifications(
     db: Session = Depends(get_db),

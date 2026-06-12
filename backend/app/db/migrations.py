@@ -42,8 +42,8 @@ def run_legacy_mysql_migrations(engine: Engine) -> None:
             return
 
         index_names = _get_index_names(connection, 'product')
-        if 'idx_product_category_status' in index_names and has_legacy_category_name:
-            connection.execute(text("DROP INDEX idx_product_category_status ON product"))
+        #if 'idx_product_category_status' in index_names and has_legacy_category_name:
+            #connection.execute(text("DROP INDEX idx_product_category_status ON product"))
 
         connection.execute(
             text(

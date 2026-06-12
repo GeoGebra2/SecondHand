@@ -16,6 +16,8 @@ from app.schemas.social import (
     NotificationResponse,
     TradeTrendItem,
 )
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 
 class SocialService:
@@ -36,6 +38,19 @@ class SocialService:
             raise ValueError('您已经收藏过该商品')
 
         db.add(Favorite(user_id=user.user_id, product_id=product_id))
+        db.commit()
+
+    def remove_favorite(self, db: Session, user: User, product_id: int) -> None:
+        favorite = db.scalar(
+            select(Favorite).where(
+                Favorite.user_id == user.user_id,
+                Favorite.product_id == product_id,
+            )
+        )
+        if favorite is None:
+            raise ValueError('收藏不存在')
+
+        db.delete(favorite)
         db.commit()
 
     def list_favorites(self, db: Session, user: User) -> list[FavoriteResponse]:
@@ -69,12 +84,39 @@ class SocialService:
         return NotificationResponse.model_validate(notification)
 
     def list_notifications(self, db: Session, user: User) -> list[NotificationResponse]:
-        notifications = db.scalars(
-            select(Notification)
-            .where(Notification.receiver_id == user.user_id)
-            .order_by(Notification.create_time.desc())
-        ).all()
-        return [NotificationResponse.model_validate(item) for item in notifications]
+        try:
+            notifications = db.scalars(
+                select(Notification)
+                .where(Notification.receiver_id == user.user_id)
+                .order_by(Notification.create_time.desc())
+            ).all()
+            return [NotificationResponse.model_validate(item) for item in notifications]
+        except OperationalError as exc:
+            # Handle schema mismatch where notification_id column may be missing in DB
+            # Fallback: query common columns directly and return best-effort results.
+            try:
+                rows = db.execute(
+                    text(
+                        'SELECT receiver_id, content, create_time FROM notification '
+                        'WHERE receiver_id = :rid ORDER BY create_time DESC'
+                    ),
+                    {'rid': user.user_id},
+                ).all()
+            except Exception:
+                # If even raw query fails, propagate original error
+                raise
+
+            results: list[NotificationResponse] = []
+            for receiver_id, content, create_time in rows:
+                results.append(
+                    NotificationResponse(
+                        notification_id=0,
+                        receiver_id=receiver_id,
+                        content=content,
+                        create_time=create_time,
+                    )
+                )
+            return results
 
     def get_dashboard_stats(self, db: Session) -> DashboardStatsResponse:
         category_rows = db.execute(

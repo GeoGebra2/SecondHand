@@ -8,6 +8,7 @@ from app.models.product import Product
 from app.models.review import Review
 from app.models.user import User
 from app.schemas.order import OrderCreateRequest, OrderResponse, OrderStatusResponse
+from app.services.social_service import service as social_service
 
 
 class OrderService:
@@ -66,6 +67,18 @@ class OrderService:
         db.commit()
         db.refresh(order)
         db.refresh(product)
+        # 发送站内通知给卖家，告知商品被下单
+        try:
+            seller = db.get(User, product.seller_id)
+            if seller is not None:
+                content = f'您的商品 "{product.title}" 有新的订单（买家：{buyer.user_name}），请及时处理。'
+                try:
+                    social_service.create_notification(db, seller.user_id, content)
+                except Exception as exc:
+                    # print to server logs to help debugging notification failures
+                    print(f'Failed to create notification for seller={seller.user_id}:', exc)
+        except Exception as exc:
+            print('Unexpected error while attempting to notify seller:', exc)
         return self._build_order_response(
             order,
             {product.product_id: product},
@@ -85,6 +98,18 @@ class OrderService:
         db.add(order)
         db.commit()
         product = self._get_product_or_raise(db, order.product_id)
+        # 通知买家：卖家已确认接单
+        try:
+            buyer = db.get(User, order.buyer_id)
+            seller = db.get(User, order.seller_id)
+            if buyer is not None and seller is not None:
+                content = f'卖家 {seller.user_name} 已确认您的订单（商品：{product.title}）。'
+                try:
+                    social_service.create_notification(db, buyer.user_id, content)
+                except Exception as exc:
+                    print(f'Failed to create notification for buyer={buyer.user_id}:', exc)
+        except Exception as exc:
+            print('Unexpected error while attempting to notify buyer on confirm:', exc)
         return OrderStatusResponse(
             order_id=order.order_id,
             order_status=order.order_status,

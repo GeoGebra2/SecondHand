@@ -85,13 +85,20 @@
       </article>
 
       <article class="section-card" style="margin-top: 20px; grid-column: 1 / -1; border-left: 4px solid #3b82f6;">
-        <h3>站内消息提醒 (用户: {{ authState.user?.user_name || '未登录' }})</h3>
-        <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">
-          动态拉取自数据库的通知数据，包含买家购物意向等系统状态。
-        </p>
+        <h3>
+          站内消息提醒 (用户: {{ authState.user?.user_name || '未登录' }})
+          <small style="color:#6b7280; font-size:12px; margin-left:8px;">（{{ notifications.length }}）</small>
+        </h3>
+
+        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
+          <p class="muted-text" style="font-size:13px; margin:0;">动态拉取自数据库的通知数据，包含买家购物意向等系统状态。</p>
+          <div>
+            <button class="muted-btn" @click="loadMyNotifications" style="padding:6px 10px; border-radius:6px; margin-left:8px;">刷新通知</button>
+          </div>
+        </div>
 
         <div v-if="notifications.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
-          暂无新通知
+          暂无新通知，若您确认有新订单请点击右上角“刷新通知”或稍后再试。
         </div>
 
         <div v-else style="display: flex; flex-direction: column; gap: 10px;">
@@ -124,11 +131,17 @@
             :key="fav.favorite_id"
             style="background: #fff; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
           >
-            <h4 style="margin: 0 0 8px 0; color: #f59e0b;">{{ fav.product_title }}</h4>
-            <p style="margin: 5px 0; font-size: 14px;">分类: <strong>{{ fav.category_name }}</strong></p>
-            <small style="color: #999; font-size: 11px;">
-              时间: {{ formatDate(fav.create_time) }}
-            </small>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <div>
+                <h4 style="margin: 0 0 8px 0; color: #f59e0b;">{{ fav.product_title }}</h4>
+                <p style="margin: 5px 0; font-size: 14px;">分类: <strong>{{ fav.category_name }}</strong></p>
+                <small style="color: #999; font-size: 11px;">时间: {{ formatDate(fav.create_time) }}</small>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="muted-btn" @click="handleUnfavorite(fav.product_id)" style="padding:6px 10px; border-radius:6px; border:1px solid #e5e7eb; background:#fff;">取消收藏</button>
+              </div>
+            </div>
           </div>
         </div>
       </article>
@@ -137,10 +150,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { fetchFavorites, fetchNotifications } from '../api/social'
+import { deleteFavorite } from '../api/social'
 import { useAuth } from '../composables/useAuth'
 
 const { authState, fetchMe, updateProfile } = useAuth()
@@ -160,6 +174,7 @@ const successMessage = ref('')
 const errorMessage = ref('')
 const myFavorites = ref([])
 const notifications = ref([])
+const _notificationsPoll = ref(null)
 
 function syncForm() {
   form.user_name = authState.user?.user_name || ''
@@ -195,7 +210,9 @@ async function loadMyNotifications() {
     return
   }
   try {
-    notifications.value = await fetchNotifications()
+    const data = await fetchNotifications()
+    notifications.value = data
+    console.log('Loaded notifications:', notifications.value)
   } catch (error) {
     console.error('获取通知失败:', error)
   }
@@ -204,6 +221,15 @@ async function loadMyNotifications() {
 async function refreshAllData() {
   await loadMyPrivateFavorites()
   await loadMyNotifications()
+}
+
+async function handleUnfavorite(productId) {
+  try {
+    await deleteFavorite(productId)
+    await refreshAllData()
+  } catch (err) {
+    console.error('取消收藏失败', err)
+  }
 }
 
 async function handleUpdate() {
@@ -227,6 +253,8 @@ onMounted(async () => {
   }
   syncForm()
   await refreshAllData()
+  // start polling notifications while on profile page
+  startNotificationsPoll()
 })
 
 watch(
@@ -234,6 +262,10 @@ watch(
   async (newPath) => {
     if (newPath === '/profile') {
       await refreshAllData()
+      startNotificationsPoll()
+    }
+    else {
+      stopNotificationsPoll()
     }
   },
   { immediate: true }
@@ -244,7 +276,36 @@ watch(
   async () => {
     syncForm()
     await refreshAllData()
+    startNotificationsPoll()
   },
   { deep: true }
 )
+
+function startNotificationsPoll() {
+  try {
+    stopNotificationsPoll()
+    // only poll when user is on profile and logged in
+    if (route.path !== '/profile' || !authState.user?.user_id) return
+    _notificationsPoll.value = setInterval(async () => {
+      try {
+        await loadMyNotifications()
+      } catch (err) {
+        console.error('通知轮询失败', err)
+      }
+    }, 3000)
+  } catch (err) {
+    console.error('启动通知轮询失败', err)
+  }
+}
+
+function stopNotificationsPoll() {
+  if (_notificationsPoll.value) {
+    clearInterval(_notificationsPoll.value)
+    _notificationsPoll.value = null
+  }
+}
+
+onUnmounted(() => {
+  stopNotificationsPoll()
+})
 </script>
