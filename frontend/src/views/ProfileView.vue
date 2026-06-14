@@ -22,8 +22,16 @@
             <strong>{{ authState.user?.role || '-' }}</strong>
           </div>
           <div class="meta-item">
+            <span class="meta-label">账号状态</span>
+            <span class="tag" :class="statusTagClass">{{ formatUserStatus(authState.user?.status) }}</span>
+          </div>
+          <div class="meta-item">
             <span class="meta-label">信誉分</span>
             <strong>{{ authState.user?.credit_score ?? '-' }}</strong>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">风险等级</span>
+            <span class="tag" :class="riskTagClass">{{ formatRiskLevel(accountStatus?.risk_level) }}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">注册时间</span>
@@ -85,10 +93,11 @@
       </article>
 
       <article class="section-card" style="margin-top: 20px; grid-column: 1 / -1; border-left: 4px solid #3b82f6;">
-        <h3>🔔 站内消息实时提醒 (用户: {{ authState.user?.user_name || '未登录' }})</h3>
+        <h3>站内消息实时提醒 (用户: {{ authState.user?.user_name || '未登录' }})</h3>
         <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">
-          动态拉取自 MySQL 的 notification 表，包含买家购物意向等系统实时状态。
+          自动刷新账号状态与 notification 表消息，包含买家下单、管理员处理等系统状态。
         </p>
+        <p v-if="statusNotice" class="form-error" style="margin-bottom: 12px;">{{ statusNotice }}</p>
 
         <div v-if="notifications.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
           暂无新通知
@@ -132,11 +141,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
-const { authState, fetchMe, updateProfile } = useAuth()
+const { authState, fetchAccountStatus, fetchMe, updateProfile } = useAuth()
 const route = useRoute()
 
 const form = reactive({
@@ -153,7 +162,31 @@ const successMessage = ref('')
 const errorMessage = ref('')
 
 const myFavorites = ref([])
-const notifications = ref([]) // 新增：定义消息通知数组
+const notifications = ref([])
+const accountStatus = ref(null)
+let refreshTimer = null
+
+const statusNotice = computed(() => {
+  if (authState.user?.status === 'blocked') {
+    return '你的账号已被管理员拉黑，普通交易功能将被限制。'
+  }
+  if (accountStatus.value?.warning_reasons?.length) {
+    return `当前账号存在风险提示：${accountStatus.value.warning_reasons.join('、')}`
+  }
+  return ''
+})
+
+const statusTagClass = computed(() => (
+  authState.user?.status === 'blocked' ? 'tag-danger' : 'tag-incoming'
+))
+
+const riskTagClass = computed(() => (
+  {
+    LOW: 'tag-incoming',
+    MEDIUM: 'tag-warning',
+    HIGH: 'tag-danger',
+  }[accountStatus.value?.risk_level] || ''
+))
 
 function syncForm() {
   form.user_name = authState.user?.user_name || ''
@@ -169,6 +202,26 @@ function formatDate(value) {
     return '-'
   }
   return new Date(value).toLocaleString('zh-CN')
+}
+
+function formatUserStatus(status) {
+  return (
+    {
+      active: '正常',
+      blocked: '已拉黑',
+      disabled: '已禁用',
+    }[status] || status || '-'
+  )
+}
+
+function formatRiskLevel(level) {
+  return (
+    {
+      LOW: '低风险',
+      MEDIUM: '中风险',
+      HIGH: '高风险',
+    }[level] || '-'
+  )
 }
 
 // 封装：获取收藏夹数据
@@ -189,28 +242,42 @@ async function loadMyPrivateFavorites() {
   }
 }
 
-// 新增：获取当前用户的真实站内消息提醒
-async function loadMyNotifications() {
-  const currentUserId = authState.user?.user_id
-  if (!currentUserId) {
-    notifications.value = []
-    return
-  }
+async function loadAccountStatus() {
   try {
-    const res = await fetch(`http://127.0.0.1:8000/my_task/notifications/${currentUserId}?t=${Date.now()}`)
-    const data = await res.json()
-    if (data.status === 'success') {
-      notifications.value = data.data
-    }
+    const status = await fetchAccountStatus()
+    accountStatus.value = status
+    notifications.value = status?.notifications || []
   } catch (error) {
-    console.error('获取通知失败:', error)
+    console.error('获取个人中心状态失败:', error)
   }
 }
 
 // 统一打包数据刷新动作
 async function refreshAllData() {
+  await loadAccountStatus()
   await loadMyPrivateFavorites()
-  await loadMyNotifications() // 同时冲刷收藏夹和通知栏
+}
+
+async function handleUpdate() {
+  submitting.value = true
+  successMessage.value = ''
+  errorMessage.value = ''
+  try {
+    await updateProfile({
+      user_name: form.user_name,
+      phone: form.phone,
+      email: form.email,
+      gender: form.gender || null,
+      avatar_url: form.avatar_url || null,
+      bio: form.bio || null,
+    })
+    await refreshAllData()
+    successMessage.value = '个人资料已保存。'
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '保存个人资料失败'
+  } finally {
+    submitting.value = false
+  }
 }
 
 // 统一的初始化挂载周期
@@ -220,6 +287,13 @@ onMounted(async () => {
   }
   syncForm()
   await refreshAllData()
+  refreshTimer = window.setInterval(refreshAllData, 5000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer)
+  }
 })
 
 // 盯死路由变化，只要切回个人中心页面，全自动强制重新清洗最新数据
@@ -236,9 +310,16 @@ watch(
 // 多账号隔离监听：当检测到换号或登出时，瞬间刷新或清空列表
 watch(
   () => authState.user,
-  async () => {
-    await refreshAllData()
+  () => {
+    syncForm()
   },
   { deep: true }
+)
+
+watch(
+  () => authState.user?.user_id,
+  async () => {
+    await refreshAllData()
+  }
 )
 </script>

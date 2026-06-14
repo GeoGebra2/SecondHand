@@ -98,6 +98,14 @@
               >
                 ⭐ 收藏
               </button>
+              <button
+                class="secondary-btn"
+                style="margin-left: 8px;"
+                type="button"
+                @click="handleReportSeller(product)"
+              >
+                举报卖家
+              </button>
             </td>
           </tr>
           <tr v-if="!products.length && !loading">
@@ -114,7 +122,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { createOrder } from '../api/orders'
-import { fetchCategories, fetchProducts } from '../api/products'
+import { fetchCategories, fetchProducts, fetchSellerRiskProfile } from '../api/products'
+import { createUserReport } from '../api/reports'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
@@ -175,6 +184,35 @@ async function handleMyFavorite(productId) {
     }
   } catch (error) {
     alert('无法连接到后端，请确保 FastAPI 正在运行！')
+  }
+}
+
+async function handleReportSeller(product) {
+  if (!isAuthenticated.value) {
+    router.push({ path: '/login', query: { redirect: '/products' } })
+    return
+  }
+  if (authState.user?.user_id === product.seller_id) {
+    errorMessage.value = '不能举报自己发布的商品'
+    return
+  }
+
+  const reason = window.prompt(`请输入举报卖家“${product.seller_name}”的原因`)
+  if (!reason || !reason.trim()) {
+    return
+  }
+
+  successMessage.value = ''
+  errorMessage.value = ''
+  try {
+    await createUserReport({
+      reported_user_id: product.seller_id,
+      reason: reason.trim(),
+      description: `来自商品“${product.title}”的举报`,
+    })
+    successMessage.value = '举报已提交，管理员会根据举报情况处理。'
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '举报提交失败'
   }
 }
 
@@ -268,16 +306,32 @@ async function handleCreateOrder(product) {
     return
   }
 
-// 在点击某个购买意向或下单成功时，调用后端发送通知
-async function triggerNotification(sellerId, productName) {
-  await fetch('http://127.0.0.1:8000/my_task/notifications/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      receiver_id: sellerId, // 接收者是卖家
-      content: `🔔 系统提醒：有同学对你发布的商品【${productName}】产生了购买意向，请及时处理！`
-    })
-  })
+  try {
+    const riskProfile = await fetchSellerRiskProfile(product.seller_id)
+    if (['MEDIUM', 'HIGH'].includes(riskProfile.risk_level)) {
+      const riskText = riskProfile.warning_reasons.length
+        ? riskProfile.warning_reasons.join('、')
+        : '系统识别该卖家存在一定交易风险'
+      const confirmed = window.confirm(
+        `风险提示：卖家“${product.seller_name}”当前为${formatRiskLevel(riskProfile.risk_level)}，原因：${riskText}。是否继续下单？`
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '获取卖家风险画像失败'
+    return
+  }
+
+function formatRiskLevel(level) {
+  return (
+    {
+      LOW: '低风险',
+      MEDIUM: '中风险',
+      HIGH: '高风险',
+    }[level] || level
+  )
 }
 
   submittingProductId.value = product.product_id
