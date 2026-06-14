@@ -74,18 +74,6 @@ async function fetchMe() {
   return authState.user
 }
 
-async function fetchAccountStatus() {
-  if (!authState.token) {
-    return null
-  }
-
-  const response = await http.get('/auth/me/status')
-  const status = response.data.data
-  authState.user = status.user
-  persistAuth()
-  return status
-}
-
 async function updateProfile(payload) {
   const response = await http.put('/auth/me', payload)
   authState.user = response.data.data
@@ -112,7 +100,7 @@ async function initializeAuth() {
 
   if (authState.token) {
     try {
-      await fetchAccountStatus()
+      await fetchMe()
     } catch {
       clearSession()
     }
@@ -129,7 +117,6 @@ export function useAuth() {
     logout,
     register,
     fetchMe,
-    fetchAccountStatus,
     updateProfile,
     initializeAuth,
     clearSession,

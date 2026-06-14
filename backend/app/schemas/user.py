@@ -23,24 +23,6 @@ class UserProfileResponse(BaseModel):
     last_login_time: datetime | None = None
 
 
-class NotificationResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    notification_id: int
-    receiver_id: int
-    content: str
-    create_time: datetime
-
-
-class UserStatusResponse(BaseModel):
-    user: UserProfileResponse
-    computed_score: int
-    credit_level: str
-    risk_level: str
-    warning_reasons: list[str]
-    notifications: list[NotificationResponse]
-
-
 class UserProfileUpdateRequest(BaseModel):
     user_name: str | None = Field(default=None, min_length=2, max_length=50)
     phone: str | None = Field(default=None, min_length=6, max_length=20)
