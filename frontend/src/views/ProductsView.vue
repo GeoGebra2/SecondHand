@@ -13,9 +13,9 @@
         </label>
         <label class="form-field">
           <span>分类</span>
-          <select v-model="filters.category_name" @change="loadProducts">
+          <select v-model="filters.category_id" @change="loadProducts">
             <option value="">全部分类</option>
-            <option v-for="category in categories" :key="category.category_id" :value="category.category_name">
+            <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
               {{ category.category_name }}
             </option>
           </select>
@@ -96,7 +96,7 @@
                 type="button"
                 @click="handleMyFavorite(product.product_id)"
               >
-                ⭐ 收藏
+                收藏
               </button>
               <button
                 class="secondary-btn"
@@ -139,7 +139,7 @@ const sortRule = ref('publish_time_desc')
 
 const filters = reactive({
   keyword: '',
-  category_name: '',
+  category_id: '',
   min_price: '',
   max_price: '',
 })
@@ -157,10 +157,7 @@ function formatProductStatus(status) {
   )
 }
 
-// 【新增：处理用户点击收藏按钮的逻辑】
-// frontend/src/views/ProductsView.vue
 async function handleMyFavorite(productId) {
-  // 严格校验登录态
   if (!isAuthenticated.value || !authState.user?.user_id) {
     alert('提示：请先去登录您的个人账号再进行收藏！')
     router.push({ path: '/login', query: { redirect: '/products' } })
@@ -168,22 +165,10 @@ async function handleMyFavorite(productId) {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/my_task/favorite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: authState.user.user_id, // 绝不硬编码，只用当前登录人的真实 ID
-        product_id: productId
-      })
-    })
-    const data = await response.json()
-    if (data.status === 'success') {
-      alert(`🌟 账号【${authState.user.user_name}】收藏成功！`)
-    } else {
-      alert('收藏失败：' + (data.detail || '您可能已经收藏过该商品'))
-    }
+    await createFavorite({ product_id: productId })
+    alert(`账号【${authState.user.user_name}】收藏成功！`)
   } catch (error) {
-    alert('无法连接到后端，请确保 FastAPI 正在运行！')
+    alert(error.response?.data?.detail || '收藏失败，请稍后重试')
   }
 }
 
@@ -237,6 +222,7 @@ function buildQueryParams() {
     ...Object.fromEntries(
       Object.entries(filters).filter(([, value]) => value !== '' && value !== null && value !== undefined),
     ),
+    category_id: filters.category_id ? Number(filters.category_id) : undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
   }
@@ -289,7 +275,7 @@ async function loadProducts() {
 async function resetFilters() {
   Object.assign(filters, {
     keyword: '',
-    category_name: '',
+    category_id: '',
     min_price: '',
     max_price: '',
   })
@@ -337,6 +323,10 @@ function formatRiskLevel(level) {
   submittingProductId.value = product.product_id
   try {
     await createOrder({ product_id: product.product_id, buyer_note: '期待尽快线下交易' })
+    await createNotification({
+      receiver_id: product.seller_id,
+      content: `系统提醒：有同学对你发布的商品【${product.title}】产生了购买意向，请及时处理！`,
+    })
     successMessage.value = `已为商品“${product.title}”创建订单，请前往订单页继续操作。`
     await loadProducts()
   } catch (error) {

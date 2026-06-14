@@ -10,11 +10,11 @@ class ProductCreateRequest(BaseModel):
     title: str = Field(min_length=2, max_length=100)
     description: str | None = Field(default=None, max_length=1000)
     price: Decimal = Field(gt=0)
-    category_name: str = Field(min_length=2, max_length=50)
+    category_id: int = Field(gt=0)
     trade_location: str = Field(min_length=2, max_length=100)
     image_urls: list[str] = Field(default_factory=list, max_length=6)
 
-    @field_validator('title', 'category_name', 'trade_location')
+    @field_validator('title', 'trade_location')
     @classmethod
     def strip_text(cls, value: str) -> str:
         return value.strip()
@@ -23,8 +23,6 @@ class ProductCreateRequest(BaseModel):
     def validate_required_text(self) -> 'ProductCreateRequest':
         if len(self.title) < 2:
             raise ValueError('商品标题至少需要 2 个字符')
-        if len(self.category_name) < 2:
-            raise ValueError('商品分类至少需要 2 个字符')
         if len(self.trade_location) < 2:
             raise ValueError('交易地点至少需要 2 个字符')
         return self
@@ -41,16 +39,16 @@ class ProductUpdateRequest(ProductCreateRequest):
 
 class ProductQueryParams(BaseModel):
     keyword: str | None = Field(default=None, max_length=100)
-    category_name: str | None = Field(default=None, max_length=50)
+    category_id: int | None = Field(default=None, gt=0)
     min_price: Decimal | None = Field(default=None, ge=0)
     max_price: Decimal | None = Field(default=None, ge=0)
     sort_by: Literal['publish_time', 'price'] = 'publish_time'
     sort_order: Literal['asc', 'desc'] = 'desc'
     include_offline: bool = False
 
-    @field_validator('keyword', 'category_name')
+    @field_validator('keyword')
     @classmethod
-    def strip_optional_text(cls, value: str | None) -> str | None:
+    def strip_keyword(cls, value: str | None) -> str | None:
         if value is None:
             return None
         stripped = value.strip()
@@ -66,6 +64,7 @@ class ProductResponse(BaseModel):
     title: str
     description: str | None = None
     price: Decimal
+    category_id: int
     category_name: str
     trade_location: str
     status: str

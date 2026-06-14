@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get('', response_model=ApiResponse)
 def list_products(
     keyword: str | None = Query(default=None, max_length=100),
-    category_name: str | None = Query(default=None, max_length=50),
+    category_id: int | None = Query(default=None, gt=0),
     min_price: Decimal | None = Query(default=None, ge=0),
     max_price: Decimal | None = Query(default=None, ge=0),
     sort_by: str = Query(default='publish_time', pattern='^(publish_time|price)$'),
@@ -33,7 +33,7 @@ def list_products(
     try:
         params = ProductQueryParams(
             keyword=keyword,
-            category_name=category_name,
+            category_id=category_id,
             min_price=min_price,
             max_price=max_price,
             sort_by=sort_by,

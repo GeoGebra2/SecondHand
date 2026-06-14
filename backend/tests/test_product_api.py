@@ -41,13 +41,13 @@ def create_category(db_session, **overrides):
     return category
 
 
-def create_product(db_session, seller_id, **overrides):
+def create_product(db_session, seller_id, category_id, **overrides):
     payload = {
         'seller_id': seller_id,
         'title': '数据库教材',
         'description': '配套期末复习笔记',
         'price': Decimal('35.00'),
-        'category_name': '教材资料',
+        'category_id': category_id,
         'trade_location': '图书馆门口',
         'status': 'ON_SALE',
     }
@@ -67,15 +67,16 @@ def login_and_get_headers(client, account, password='student123'):
 
 def test_list_products_supports_search_filter_price_sort_and_images(client, db_session):
     seller = create_user(db_session)
-    create_category(db_session)
-    matched = create_product(db_session, seller.user_id)
+    study_category = create_category(db_session)
+    matched = create_product(db_session, seller.user_id, study_category.category_id)
+    digital_category = create_category(db_session, category_name='数码产品', description='电子设备', sort_order=2)
     create_product(
         db_session,
         seller.user_id,
+        digital_category.category_id,
         title='蓝牙耳机',
         description='降噪耳机',
         price=Decimal('120.00'),
-        category_name='数码产品',
     )
     db_session.add(ProductImage(product_id=matched.product_id, image_url='https://example.com/book.jpg', sort_order=0))
     db_session.commit()
@@ -84,7 +85,7 @@ def test_list_products_supports_search_filter_price_sort_and_images(client, db_s
         '/api/products',
         params={
             'keyword': '复习',
-            'category_name': '教材资料',
+            'category_id': study_category.category_id,
             'min_price': '20',
             'max_price': '50',
             'sort_by': 'price',
@@ -101,9 +102,10 @@ def test_list_products_supports_search_filter_price_sort_and_images(client, db_s
 
 def test_list_products_sorts_by_price_ascending_and_descending(client, db_session):
     seller = create_user(db_session)
-    create_product(db_session, seller.user_id, title='低价商品', price=Decimal('12.00'))
-    create_product(db_session, seller.user_id, title='高价商品', price=Decimal('99.00'))
-    create_product(db_session, seller.user_id, title='中价商品', price=Decimal('35.00'))
+    category = create_category(db_session)
+    create_product(db_session, seller.user_id, category.category_id, title='低价商品', price=Decimal('12.00'))
+    create_product(db_session, seller.user_id, category.category_id, title='高价商品', price=Decimal('99.00'))
+    create_product(db_session, seller.user_id, category.category_id, title='中价商品', price=Decimal('35.00'))
 
     asc_response = client.get('/api/products', params={'sort_by': 'price', 'sort_order': 'asc'})
     desc_response = client.get('/api/products', params={'sort_by': 'price', 'sort_order': 'desc'})
@@ -116,6 +118,7 @@ def test_list_products_sorts_by_price_ascending_and_descending(client, db_sessio
 
 def test_create_product_persists_category_and_images(client, db_session):
     seller = create_user(db_session)
+    category = create_category(db_session, category_name='生活用品', description='宿舍日用', sort_order=3)
     headers = login_and_get_headers(client, seller.student_no)
 
     response = client.post(
@@ -125,7 +128,7 @@ def test_create_product_persists_category_and_images(client, db_session):
             'title': '九成新台灯',
             'description': '亮度可调，适合宿舍学习',
             'price': '45.00',
-            'category_name': '生活用品',
+            'category_id': category.category_id,
             'trade_location': '宿舍楼下',
             'image_urls': ['https://example.com/lamp-1.jpg', 'https://example.com/lamp-2.jpg'],
         },
@@ -140,8 +143,8 @@ def test_create_product_persists_category_and_images(client, db_session):
 
 def test_seller_can_update_and_offline_own_product(client, db_session):
     seller = create_user(db_session)
-    create_category(db_session)
-    product = create_product(db_session, seller.user_id)
+    category = create_category(db_session)
+    product = create_product(db_session, seller.user_id, category.category_id)
     headers = login_and_get_headers(client, seller.student_no)
 
     update_response = client.put(
@@ -151,7 +154,7 @@ def test_seller_can_update_and_offline_own_product(client, db_session):
             'title': '数据库教材第二版',
             'description': '补充课堂笔记',
             'price': '40.00',
-            'category_name': '教材资料',
+            'category_id': category.category_id,
             'trade_location': '教学楼 A 区',
             'image_urls': ['https://example.com/db-book.jpg'],
         },
@@ -172,8 +175,8 @@ def test_rejects_managing_other_seller_product(client, db_session):
         email='other-seller@test.com',
         phone='13800005002',
     )
-    create_category(db_session)
-    product = create_product(db_session, seller.user_id)
+    category = create_category(db_session)
+    product = create_product(db_session, seller.user_id, category.category_id)
     headers = login_and_get_headers(client, other.student_no)
 
     response = client.patch(f'/api/products/{product.product_id}/offline', headers=headers)
@@ -208,10 +211,10 @@ def test_create_and_update_category(client, db_session):
     assert update_response.json()['data']['category_name'] == '运动健身'
 
 
-def test_update_category_name_syncs_existing_products(client, db_session):
+def test_update_category_name_keeps_product_relation(client, db_session):
     seller = create_user(db_session)
     category = create_category(db_session)
-    product = create_product(db_session, seller.user_id, category_name=category.category_name)
+    product = create_product(db_session, seller.user_id, category.category_id)
     headers = login_and_get_headers(client, seller.student_no)
 
     response = client.put(
@@ -227,11 +230,12 @@ def test_update_category_name_syncs_existing_products(client, db_session):
 
     assert response.status_code == 200
     db_session.refresh(product)
-    assert product.category_name == '课程资料'
+    assert product.category_id == category.category_id
 
 
 def test_rejects_blank_product_title_after_strip(client, db_session):
     seller = create_user(db_session)
+    category = create_category(db_session)
     headers = login_and_get_headers(client, seller.student_no)
 
     response = client.post(
@@ -241,7 +245,7 @@ def test_rejects_blank_product_title_after_strip(client, db_session):
             'title': '   ',
             'description': '空白标题测试',
             'price': '20.00',
-            'category_name': '教材资料',
+            'category_id': category.category_id,
             'trade_location': '图书馆门口',
             'image_urls': [],
         },

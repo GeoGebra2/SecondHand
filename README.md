@@ -1,34 +1,66 @@
-# 校园二手交易平台框架
+# 校园二手交易平台数据库管理系统
 
-这是一个基于 `Vue 3 + FastAPI` 的校园二手交易平台课程项目框架，适合在现有数据库大作业方案基础上继续扩展。
+这是一个基于 `Vue 3 + FastAPI + MySQL` 的校园二手交易平台数据库大作业项目，面向“校园内部二手交易”场景，已经实现了用户认证、商品管理、订单流转、评价反馈、收藏通知和后台统计等核心功能。
 
-## 当前范围
+项目重点不只是页面展示，而是通过一个真实业务场景体现数据库课程中的需求分析、关系建模、外键约束、索引设计、事务控制、统计查询与接口测试能力。
 
-- 已搭建前端页面骨架、路由结构和基础样式
-- 已搭建后端 API 分层结构和示例接口
-- 已预留环境变量和后续接入数据库的位置
-- 当前不包含完整业务逻辑、数据库连接和鉴权细节
+## 已实现功能
+
+- 用户注册、登录、退出登录、个人资料查看与更新
+- 商品分类管理，使用 `category_id` 外键关联商品
+- 商品发布、编辑、下架、重新上架、图片列表展示
+- 商品大厅查询，支持关键字、分类、价格区间和排序筛选
+- 订单创建、卖家确认、买家完成、双方取消
+- 买家评价卖家，并同步更新卖家信誉分
+- 商品收藏、个人收藏夹、站内通知提醒
+- 管理后台统计，包括热门分类、活跃用户、成交趋势
+- 后端接口测试，覆盖商品、订单、评价、收藏通知等主流程
+
+## 技术栈
+
+- 前端：`Vue 3`、`Vue Router`、`Axios`、`Vite`
+- 后端：`FastAPI`、`SQLAlchemy`
+- 数据库：`MySQL 8.0`
+- 测试：`pytest`
 
 ## 目录结构
 
 ```text
 SecondHand/
-├─ database/                 # MySQL 初始化脚本
-├─ frontend/
-├─ backend/
-├─ docker-compose.yml        # 一键启动数据库
+├─ backend/                 # FastAPI 后端与接口测试
+├─ frontend/                # Vue 3 前端页面
+├─ database/mysql/init/     # MySQL 初始化脚本
+├─ docs/                    # 报告与 SQL 文档
+├─ docker-compose.yml       # 一键启动 MySQL
 └─ README.md
 ```
 
-## 数据库启动
+## 数据库结构
 
-项目仓库内已经包含统一的 MySQL 初始化文件，团队成员可以直接使用同一套数据库结构和演示数据。
+当前核心数据表包括：
+
+- `user`
+- `category`
+- `product`
+- `product_image`
+- `order_info`
+- `review`
+- `favorite`
+- `notification`
+
+其中商品与分类采用外键设计：
+
+- `product.category_id -> category.category_id`
+
+这样比直接保存分类名称更规范，也便于分类改名、统计和索引优化。
+
+## 数据库启动
 
 ```bash
 docker compose up -d mysql
 ```
 
-启动后可使用以下连接信息：
+启动后连接信息如下：
 
 - 主机：`127.0.0.1`
 - 端口：`3307`
@@ -36,32 +68,28 @@ docker compose up -d mysql
 - 用户名：`secondhand_user`
 - 密码：`secondhand123`
 
-数据库会自动导入以下内容：
+初始化脚本会自动导入：
 
-- 用户认证表结构：`database/mysql/init/01_auth_user.sql`
-- 演示账号数据：`database/mysql/init/02_auth_seed.sql`
+- 表结构：`database/mysql/init/01_auth_user.sql`
+- 演示账号与种子数据：`database/mysql/init/02_auth_seed.sql`
+- 编码修复脚本：`database/mysql/init/03_fix_seed_encoding.sql`
+- 收藏与通知表：`database/mysql/init/04_my_task_tables.sql`
 
 演示账号：
 
 - 学生账号：`student@campus.edu` / `student123`
 - 管理员账号：`admin@campus.edu` / `admin12345`
 
-后端启动前，建议先复制环境变量模板：
+## 后端启动
+
+首次启动建议先复制环境变量模板：
 
 ```bash
 cd backend
 copy .env.example .env
 ```
 
-## 前端启动
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 后端启动
+然后启动后端：
 
 ```bash
 cd backend
@@ -71,14 +99,90 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-如果要重启并更新docker，需执行指令：
+默认接口地址：
+
+- `http://127.0.0.1:8000/api`
+
+## 前端启动
+
 ```bash
-docker compose down-v
-docker composeup-dmysgl
+cd frontend
+npm install
+npm run dev
 ```
 
-## 后续建议
+默认前端地址：
 
-- 接入 MySQL 和 ORM
-- 实现用户、商品、订单、评价、举报等真实业务接口
-- 将前端页面与后端接口对接，替换占位数据
+- `http://127.0.0.1:5173`
+
+## 主要接口
+
+认证与资料：
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `PUT /api/auth/me`
+
+商品与分类：
+
+- `GET /api/products`
+- `POST /api/products`
+- `GET /api/products/mine`
+- `PUT /api/products/{product_id}`
+- `PATCH /api/products/{product_id}/offline`
+- `PATCH /api/products/{product_id}/relist`
+- `GET /api/products/categories`
+- `POST /api/products/categories`
+- `PUT /api/products/categories/{category_id}`
+
+订单与评价：
+
+- `GET /api/orders`
+- `POST /api/orders`
+- `PATCH /api/orders/{order_id}/confirm`
+- `PATCH /api/orders/{order_id}/complete`
+- `PATCH /api/orders/{order_id}/cancel`
+- `POST /api/reviews`
+- `GET /api/reviews/order/{order_id}`
+
+收藏、通知与统计：
+
+- `GET /api/favorites`
+- `POST /api/favorites`
+- `GET /api/notifications`
+- `POST /api/notifications`
+- `GET /api/admin/dashboard`
+
+## 已验证测试
+
+在 `backend` 目录下运行：
+
+```bash
+.venv\Scripts\python.exe -m pytest tests\test_product_api.py tests\test_order_api.py tests\test_review_api.py tests\test_social_api.py
+```
+
+当前结果：
+
+- `19 passed`
+
+## 项目亮点
+
+- 使用外键而非分类名称字符串维护商品分类关系
+- 订单状态与商品状态联动，体现事务型业务流程
+- 收藏和通知接口已并入正式鉴权体系，不再使用旁路接口
+- 后台统计直接基于数据库聚合结果生成，不是纯前端假数据
+- 具备可演示、可测试、可写入大作业报告的完整闭环
+
+## 说明
+
+如果需要重新初始化数据库，可先停止并删除旧容器与卷，再重新启动：
+
+```bash
+docker compose down -v
+docker compose up -d mysql
+```
+
+如需提交课程成果，建议配合仓库中的报告文档：
+
+- `docs/校园二手交易平台数据库管理系统-大作业报告.md`

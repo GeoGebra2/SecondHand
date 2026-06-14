@@ -100,12 +100,15 @@
         <p v-if="statusNotice" class="form-error" style="margin-bottom: 12px;">{{ statusNotice }}</p>
 
         <div v-if="notifications.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
-          暂无新通知
+          暂无新通知，若您确认有新订单请点击右上角“刷新通知”或稍后再试。
         </div>
 
         <div v-else style="display: flex; flex-direction: column; gap: 10px;">
-          <div v-for="note in notifications" :key="note.notification_id" 
-               style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <div
+            v-for="note in notifications"
+            :key="note.notification_id"
+            style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;"
+          >
             <span style="color: #1e3a8a; font-size: 14px;">{{ note.content }}</span>
             <small style="color: #60a5fa; font-size: 11px; white-space: nowrap; margin-left: 10px;">
               {{ formatDate(note.create_time) }}
@@ -115,27 +118,35 @@
       </article>
 
       <article class="section-card" style="margin-top: 10px; grid-column: 1 / -1;">
-        <h3>⭐ 我的收藏夹 (真实数据库联动)</h3>
+        <h3>我的收藏夹</h3>
         <p class="muted-text" style="font-size: 13px; margin-bottom: 15px;">
-          从 MySQL 数据库的 favorite 表实时读取你个人收藏的商品编号。
+          实时读取当前账号的收藏商品列表。
         </p>
-        
+
         <div v-if="myFavorites.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
           空空如也，快去商品大厅收藏点东西吧！
         </div>
-        
+
         <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
-          <div v-for="fav in myFavorites" :key="fav.favorite_id" 
-              style="background: #fff; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h4 style="margin: 0 0 8px 0; color: #f59e0b;">⭐ 收藏成功</h4>
-            <p style="margin: 5px 0; font-size: 14px;">商品编号 (ID): <strong>{{ fav.product_id }}</strong></p>
-            <small style="color: #999; font-size: 11px;">
-              时间: {{ new Date(fav.create_time).toLocaleDateString() }}
-            </small>
+          <div
+            v-for="fav in myFavorites"
+            :key="fav.favorite_id"
+            style="background: #fff; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
+          >
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <div>
+                <h4 style="margin: 0 0 8px 0; color: #f59e0b;">{{ fav.product_title }}</h4>
+                <p style="margin: 5px 0; font-size: 14px;">分类: <strong>{{ fav.category_name }}</strong></p>
+                <small style="color: #999; font-size: 11px;">时间: {{ formatDate(fav.create_time) }}</small>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="muted-btn" @click="handleUnfavorite(fav.product_id)" style="padding:6px 10px; border-radius:6px; border:1px solid #e5e7eb; background:#fff;">取消收藏</button>
+              </div>
+            </div>
           </div>
         </div>
       </article>
-
     </div>
   </section>
 </template>
@@ -143,6 +154,9 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+
+import { fetchFavorites, fetchNotifications } from '../api/social'
+import { deleteFavorite } from '../api/social'
 import { useAuth } from '../composables/useAuth'
 
 const { authState, fetchAccountStatus, fetchMe, updateProfile } = useAuth()
@@ -160,7 +174,6 @@ const form = reactive({
 const submitting = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
-
 const myFavorites = ref([])
 const notifications = ref([])
 const accountStatus = ref(null)
@@ -226,19 +239,14 @@ function formatRiskLevel(level) {
 
 // 封装：获取收藏夹数据
 async function loadMyPrivateFavorites() {
-  const currentUserId = authState.user?.user_id
-  if (!currentUserId) {
+  if (!authState.user?.user_id) {
     myFavorites.value = []
     return
   }
   try {
-    const res = await fetch(`http://127.0.0.1:8000/my_task/favorites/${currentUserId}?t=${Date.now()}`)
-    const data = await res.json()
-    if (data.status === 'success') {
-      myFavorites.value = data.data
-    }
+    myFavorites.value = await fetchFavorites()
   } catch (error) {
-    console.error('无法连接到后端，请检查 FastAPI 服务是否启动', error)
+    console.error('获取收藏夹失败:', error)
   }
 }
 
@@ -252,10 +260,19 @@ async function loadAccountStatus() {
   }
 }
 
-// 统一打包数据刷新动作
 async function refreshAllData() {
   await loadAccountStatus()
   await loadMyPrivateFavorites()
+  await loadMyNotifications()
+}
+
+async function handleUnfavorite(productId) {
+  try {
+    await deleteFavorite(productId)
+    await refreshAllData()
+  } catch (err) {
+    console.error('取消收藏失败', err)
+  }
 }
 
 async function handleUpdate() {
@@ -280,7 +297,6 @@ async function handleUpdate() {
   }
 }
 
-// 统一的初始化挂载周期
 onMounted(async () => {
   if (!authState.user) {
     await fetchMe()
@@ -296,18 +312,20 @@ onUnmounted(() => {
   }
 })
 
-// 盯死路由变化，只要切回个人中心页面，全自动强制重新清洗最新数据
 watch(
   () => route.path,
   async (newPath) => {
     if (newPath === '/profile') {
       await refreshAllData()
+      startNotificationsPoll()
+    }
+    else {
+      stopNotificationsPoll()
     }
   },
   { immediate: true }
 )
 
-// 多账号隔离监听：当检测到换号或登出时，瞬间刷新或清空列表
 watch(
   () => authState.user,
   () => {
@@ -316,10 +334,40 @@ watch(
   { deep: true }
 )
 
+// 合并后的代码
 watch(
   () => authState.user?.user_id,
   async () => {
     await refreshAllData()
+    // 添加 main 分支的轮询逻辑
+    startNotificationsPoll()
   }
 )
+
+function startNotificationsPoll() {
+  try {
+    stopNotificationsPoll()
+    if (route.path !== '/profile' || !authState.user?.user_id) return
+    _notificationsPoll.value = setInterval(async () => {
+      try {
+        await loadMyNotifications()
+      } catch (err) {
+        console.error('通知轮询失败', err)
+      }
+    }, 3000)
+  } catch (err) {
+    console.error('启动通知轮询失败', err)
+  }
+}
+
+function stopNotificationsPoll() {
+  if (_notificationsPoll.value) {
+    clearInterval(_notificationsPoll.value)
+    _notificationsPoll.value = null
+  }
+}
+
+onUnmounted(() => {
+  stopNotificationsPoll()
+})
 </script>
