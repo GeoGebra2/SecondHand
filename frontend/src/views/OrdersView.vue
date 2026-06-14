@@ -70,7 +70,7 @@
                 {{ isWorking(order.order_id) ? '处理中...' : '确认接单' }}
               </button>
               <button
-                v-if="canComplete(order)"
+                v-else-if="canComplete(order)"
                 class="primary-btn"
                 :disabled="isWorking(order.order_id)"
                 type="button"
@@ -79,7 +79,7 @@
                 {{ isWorking(order.order_id) ? '处理中...' : '确认成交' }}
               </button>
               <button
-                v-if="canCancel(order)"
+                v-else-if="canCancel(order)"
                 class="secondary-btn"
                 :disabled="isWorking(order.order_id)"
                 type="button"
@@ -87,7 +87,7 @@
               >
                 {{ isWorking(order.order_id) ? '处理中...' : '取消订单' }}
               </button>
-              <span v-if="!hasAvailableAction(order)" class="muted-text">无可执行操作</span>
+              <span v-else class="muted-text">无可执行操作</span>
             </td>
           </tr>
           <tr v-if="!orders.length && !loading">
@@ -286,10 +286,6 @@ function canCancel(order) {
   )
 }
 
-function hasAvailableAction(order) {
-  return canConfirm(order) || canComplete(order) || canCancel(order)
-}
-
 function isWorking(orderId) {
   return workingOrderId.value === orderId
 }
@@ -316,12 +312,9 @@ async function loadReviews() {
     .sort((left, right) => new Date(right.create_time) - new Date(left.create_time))
 }
 
-async function loadOrders(options = {}) {
+async function loadOrders() {
   loading.value = true
   errorMessage.value = ''
-  if (!options.preserveSuccessMessage) {
-    successMessage.value = ''
-  }
   try {
     orders.value = await fetchOrders()
     await loadReviews()
@@ -344,8 +337,8 @@ async function executeOrderAction(orderId, action, successText) {
   workingOrderId.value = orderId
   try {
     await action()
-    await loadOrders({ preserveSuccessMessage: true })
     successMessage.value = successText
+    await loadOrders()
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || '订单操作失败'
   } finally {
@@ -388,7 +381,7 @@ async function handleReview() {
     selectedReviewOrder.value = null
     reviewForm.score = 5
     reviewForm.content = ''
-    await loadOrders({ preserveSuccessMessage: true })
+    await loadOrders()
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || '评价提交失败'
   } finally {

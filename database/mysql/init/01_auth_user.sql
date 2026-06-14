@@ -79,14 +79,12 @@ CREATE TABLE IF NOT EXISTS `order_info` (
   `trade_location` VARCHAR(100) NOT NULL,
   `buyer_note` VARCHAR(255) NULL,
   `cancel_reason` VARCHAR(255) NULL,
-  `cancel_user_id` BIGINT NULL,
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `finish_time` DATETIME NULL,
   INDEX `idx_order_buyer_status` (`buyer_id`, `order_status`),
   INDEX `idx_order_seller_status` (`seller_id`, `order_status`),
   INDEX `idx_order_product` (`product_id`),
-  INDEX `idx_order_cancel_user` (`cancel_user_id`),
   CONSTRAINT `fk_order_product`
     FOREIGN KEY (`product_id`) REFERENCES `product` (`product_id`)
     ON DELETE CASCADE,
@@ -95,10 +93,7 @@ CREATE TABLE IF NOT EXISTS `order_info` (
     ON DELETE CASCADE,
   CONSTRAINT `fk_order_seller`
     FOREIGN KEY (`seller_id`) REFERENCES `user` (`user_id`)
-    ON DELETE CASCADE,
-  CONSTRAINT `fk_order_cancel_user`
-    FOREIGN KEY (`cancel_user_id`) REFERENCES `user` (`user_id`)
-    ON DELETE SET NULL
+    ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS `review` (
@@ -121,24 +116,4 @@ CREATE TABLE IF NOT EXISTS `review` (
     FOREIGN KEY (`reviewed_user_id`) REFERENCES `user` (`user_id`)
     ON DELETE CASCADE,
   CONSTRAINT `chk_review_score` CHECK (`score` BETWEEN 1 AND 5)
-);
-
-CREATE TABLE IF NOT EXISTS `user_report` (
-  `report_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-  `reporter_id` BIGINT NOT NULL,
-  `reported_user_id` BIGINT NOT NULL,
-  `reason` VARCHAR(100) NOT NULL,
-  `description` TEXT NULL,
-  `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX `idx_user_report_reporter` (`reporter_id`),
-  INDEX `idx_user_report_reported_user` (`reported_user_id`),
-  INDEX `idx_user_report_status` (`status`),
-  CONSTRAINT `fk_user_report_reporter`
-    FOREIGN KEY (`reporter_id`) REFERENCES `user` (`user_id`)
-    ON DELETE CASCADE,
-  CONSTRAINT `fk_user_report_reported_user`
-    FOREIGN KEY (`reported_user_id`) REFERENCES `user` (`user_id`)
-    ON DELETE CASCADE
 );
