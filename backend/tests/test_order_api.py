@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from app.core.security import hash_password
+from app.models.notification import Notification
 from app.models.order_info import OrderInfo
 from app.models.product import Category, Product
 from app.models.user import User
@@ -90,6 +91,9 @@ def test_create_order_success(client, db_session):
     assert body['data']['order_status'] == 'PENDING'
     db_session.refresh(product)
     assert product.status == 'LOCKED'
+    notification = db_session.query(Notification).filter_by(receiver_id=seller.user_id).one()
+    assert '下单' in notification.content
+    assert product.title in notification.content
 
 
 def test_create_order_rejects_self_purchase(client, db_session):
@@ -192,3 +196,31 @@ def test_cancel_order_restores_product_status(client, db_session):
 
     order = db_session.get(OrderInfo, order_id)
     assert order.cancel_reason == '临时有事无法面交'
+    assert order.cancel_user_id is None
+
+
+def test_cancel_after_confirm_records_responsible_user(client, db_session):
+    seller = create_user(
+        db_session,
+        student_no='2023003012',
+        user_name='接单后取消卖家',
+        phone='13800000042',
+        email='seller-cancel-after-confirm@test.com',
+    )
+    buyer = create_user(db_session, student_no='2023003013', email='buyer-cancel-after-confirm@test.com', phone='13800000043')
+    product = create_product(db_session, seller.user_id)
+    buyer_headers = login_and_get_headers(client, buyer.student_no)
+    seller_headers = login_and_get_headers(client, seller.student_no)
+    order_id = client.post('/api/orders', headers=buyer_headers, json={'product_id': product.product_id}).json()['data']['order_id']
+    client.patch(f'/api/orders/{order_id}/confirm', headers=seller_headers)
+
+    response = client.patch(
+        f'/api/orders/{order_id}/cancel',
+        headers=seller_headers,
+        json={'cancel_reason': '卖家无法继续交易'},
+    )
+
+    assert response.status_code == 200
+    assert response.json()['data']['order_status'] == 'CANCELLED'
+    order = db_session.get(OrderInfo, order_id)
+    assert order.cancel_user_id == seller.user_id

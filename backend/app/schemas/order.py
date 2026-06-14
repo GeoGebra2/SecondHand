@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.credit import UserRiskProfileResponse
+
 
 class OrderCreateRequest(BaseModel):
     product_id: int
@@ -27,10 +29,13 @@ class OrderResponse(BaseModel):
     trade_location: str
     buyer_note: str | None = None
     cancel_reason: str | None = None
+    cancel_user_id: int | None = None
+    cancel_user_name: str | None = None
     create_time: datetime
     update_time: datetime
     finish_time: datetime | None = None
     can_review: bool = False
+    seller_risk_profile: UserRiskProfileResponse | None = None
 
 
 class OrderStatusResponse(BaseModel):

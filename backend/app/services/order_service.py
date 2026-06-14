@@ -4,11 +4,13 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.order_info import OrderInfo
+from app.models.notification import Notification
 from app.models.product import Product
 from app.models.review import Review
 from app.models.user import User
+from app.schemas.credit import UserRiskProfileResponse
 from app.schemas.order import OrderCreateRequest, OrderResponse, OrderStatusResponse
-from app.services.social_service import service as social_service
+from app.services.credit_service import service as credit_service
 
 
 class OrderService:
@@ -24,6 +26,7 @@ class OrderService:
 
         product_ids = {order.product_id for order in orders}
         user_ids = {order.buyer_id for order in orders} | {order.seller_id for order in orders}
+        user_ids.update(order.cancel_user_id for order in orders if order.cancel_user_id is not None)
         reviewed_order_ids = set(
             db.scalars(select(Review.order_id).where(Review.order_id.in_([order.order_id for order in orders]))).all()
         )
@@ -36,7 +39,15 @@ class OrderService:
             for member in db.scalars(select(User).where(User.user_id.in_(user_ids))).all()
         }
 
-        return [self._build_order_response(order, products, users, reviewed_order_ids, user) for order in orders]
+        seller_risk_profiles = {
+            seller_id: credit_service.get_user_risk_profile(db, seller_id)
+            for seller_id in {order.seller_id for order in orders}
+        }
+
+        return [
+            self._build_order_response(order, products, users, reviewed_order_ids, user, seller_risk_profiles)
+            for order in orders
+        ]
 
     def create_order(self, db: Session, buyer: User, payload: OrderCreateRequest) -> OrderResponse:
         product = db.get(Product, payload.product_id)
@@ -61,8 +72,13 @@ class OrderService:
             trade_location=product.trade_location,
             buyer_note=payload.buyer_note,
         )
+        notification = Notification(
+            receiver_id=seller.user_id,
+            content=f'有同学对你发布的商品《{product.title}》下单，请及时确认接单。',
+        )
         product.status = 'LOCKED'
         db.add(order)
+        db.add(notification)
         db.add(product)
         db.commit()
         db.refresh(order)
@@ -85,6 +101,7 @@ class OrderService:
             {buyer.user_id: buyer, seller.user_id: seller},
             set(),
             buyer,
+            {seller.user_id: credit_service.get_user_risk_profile(db, seller.user_id)},
         )
 
     def confirm_order(self, db: Session, order_id: int, user: User) -> OrderStatusResponse:
@@ -144,8 +161,10 @@ class OrderService:
             raise ValueError('当前订单不可取消')
 
         product = self._get_product_or_raise(db, order.product_id)
+        previous_status = order.order_status
         order.order_status = 'CANCELLED'
         order.cancel_reason = cancel_reason or '用户主动取消订单'
+        order.cancel_user_id = user.user_id if previous_status == 'IN_PROGRESS' else None
         product.status = 'ON_SALE'
         db.add(order)
         db.add(product)
@@ -178,6 +197,7 @@ class OrderService:
         users: dict[int, User],
         reviewed_order_ids: set[int],
         current_user: User,
+        seller_risk_profiles: dict[int, UserRiskProfileResponse] | None = None,
     ) -> OrderResponse:
         product = products[order.product_id]
         buyer = users[order.buyer_id]
@@ -196,6 +216,8 @@ class OrderService:
             trade_location=order.trade_location,
             buyer_note=order.buyer_note,
             cancel_reason=order.cancel_reason,
+            cancel_user_id=order.cancel_user_id,
+            cancel_user_name=users[order.cancel_user_id].user_name if order.cancel_user_id else None,
             create_time=order.create_time,
             update_time=order.update_time,
             finish_time=order.finish_time,
@@ -204,6 +226,7 @@ class OrderService:
                 and order.order_status == 'COMPLETED'
                 and order.order_id not in reviewed_order_ids
             ),
+            seller_risk_profile=(seller_risk_profiles or {}).get(order.seller_id),
         )
 
 

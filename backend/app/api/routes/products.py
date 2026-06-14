@@ -14,6 +14,7 @@ from app.schemas.product import (
     ProductUpdateRequest,
 )
 from app.services.product_service import service as product_service
+from app.services.credit_service import service as credit_service
 
 router = APIRouter()
 
@@ -73,6 +74,23 @@ def list_categories(
     return ApiResponse(
         message='获取分类列表成功',
         data=[category.model_dump(mode='json') for category in categories],
+    )
+
+
+@router.get('/sellers/{seller_id}/risk-profile', response_model=ApiResponse)
+def get_seller_risk_profile(
+    seller_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> ApiResponse:
+    try:
+        profile = credit_service.get_user_risk_profile(db, seller_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    return ApiResponse(
+        message='获取卖家风险画像成功',
+        data=profile.model_dump(mode='json'),
     )
 
 
