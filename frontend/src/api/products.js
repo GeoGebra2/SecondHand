@@ -5,6 +5,16 @@ export async function fetchProducts(params = {}) {
   return response.data.data
 }
 
+export async function fetchRecommendations() {
+  const response = await http.get('/recommendations')
+  return response.data.data
+}
+
+export async function recordBrowseHistory(productIds) {
+  const response = await http.post('/recommendations/browse-history', { product_ids: productIds })
+  return response.data.data
+}
+
 export async function fetchMyProducts() {
   const response = await http.get('/products/mine')
   return response.data.data

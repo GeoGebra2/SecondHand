@@ -14,87 +14,170 @@ INSERT INTO `user` (
   `avatar_url`,
   `bio`
 ) VALUES
-(
-  '2023001001',
-  '演示学生',
-  '男',
-  '13800000001',
-  'student@campus.edu',
-  '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO',
-  'student',
-  100,
-  'active',
-  'verified',
-  NULL,
-  '用于课程演示的学生账号，明文密码：student123'
-),
-(
-  '2023000001',
-  '平台管理员',
-  '女',
-  '13800000002',
-  'admin@campus.edu',
-  '$2b$12$SiNeAziRZW2yyoQwoMrzPedLG0S189.mpwkbidbV..QC0pXUx/IxG',
-  'admin',
-  100,
-  'active',
-  'verified',
-  NULL,
-  '用于课程演示的管理员账号，明文密码：admin12345'
-);
+('2023001001', '演示学生', '男', '13800000001', 'student@campus.edu', '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO', 'student', 100, 'active', 'verified', NULL, '用于课程演示的学生账号，明文密码：student123'),
+('2023000001', '平台管理员', '女', '13800000002', 'admin@campus.edu', '$2b$12$SiNeAziRZW2yyoQwoMrzPedLG0S189.mpwkbidbV..QC0pXUx/IxG', 'admin', 100, 'active', 'verified', NULL, '用于课程演示的管理员账号，明文密码：admin12345'),
+('2023002001', '李明', '男', '13800000003', 'liming@campus.edu', '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO', 'student', 96, 'active', 'verified', NULL, '偏好数码与教材商品的活跃买家'),
+('2023002002', '王雪', '女', '13800000004', 'wangxue@campus.edu', '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO', 'student', 102, 'active', 'verified', NULL, '偏好生活用品与美妆个护的用户'),
+('2023002003', '陈涛', '男', '13800000005', 'chentao@campus.edu', '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO', 'student', 98, 'active', 'verified', NULL, '偏好运动户外与交通出行用品'),
+('2023002004', '赵晴', '女', '13800000006', 'zhaoqing@campus.edu', '$2b$12$eM0UQzjmWFSxJ1KfQy989O2ztWTpT4IPpFDA9ym78JG/U7Q4M7spO', 'student', 105, 'active', 'verified', NULL, '既是卖家也是买家，交易记录较丰富');
 
-INSERT INTO `category` (
-  `category_name`,
-  `description`,
-  `sort_order`,
-  `status`
-) VALUES
+INSERT INTO `category` (`category_name`, `description`, `sort_order`, `status`) VALUES
 ('教材资料', '课程教材、复习资料、考试笔记等', 1, 'ACTIVE'),
 ('数码产品', '耳机、键盘、平板等电子设备', 2, 'ACTIVE'),
-('生活用品', '宿舍与校园生活常用物品', 3, 'ACTIVE');
+('生活用品', '宿舍与校园生活常用物品', 3, 'ACTIVE'),
+('运动户外', '球拍、运动鞋、护具等用品', 4, 'ACTIVE'),
+('美妆个护', '护肤、洗护、收纳等个人用品', 5, 'ACTIVE'),
+('交通出行', '自行车、滑板、头盔、锁具等', 6, 'ACTIVE');
 
-INSERT INTO `product` (
-  `seller_id`,
-  `category_id`,
-  `title`,
-  `description`,
-  `price`,
-  `trade_location`,
-  `status`
-) VALUES
-(
-  1,
-  1,
-  '高等数学教材',
-  '教材较新，适合大一新生复习和期末备考。',
-  25.00,
-  '图书馆南门',
-  'ON_SALE'
-),
-(
-  1,
-  2,
-  '二手机械键盘',
-  '青轴机械键盘，自带数据线，正常使用无故障。',
-  120.00,
-  '一食堂门口',
-  'ON_SALE'
-),
-(
-  1,
-  3,
-  '宿舍小风扇',
-  '支持 USB 供电，适合宿舍桌面使用。',
-  35.00,
-  '宿舍楼下快递点',
-  'ON_SALE'
-);
+INSERT INTO `product` (`seller_id`, `category_id`, `title`, `description`, `price`, `trade_location`, `status`) VALUES
+(1, 1, '高等数学教材', '教材较新，适合大一新生复习和期末备考。', 25.00, '图书馆南门', 'ON_SALE'),
+(1, 2, '二手机械键盘', '青轴机械键盘，自带数据线，正常使用无故障。', 120.00, '一食堂门口', 'ON_SALE'),
+(1, 3, '宿舍小风扇', '支持 USB 供电，适合宿舍桌面使用。', 35.00, '宿舍楼下快递点', 'ON_SALE'),
+(4, 1, '数据库原理教材', '含课堂笔记，适合期末突击。', 28.00, '图书馆一楼', 'ON_SALE'),
+(4, 1, '离散数学复习资料', '整理了历年题和知识点总结。', 18.00, '教学楼 A 区', 'ON_SALE'),
+(4, 1, '英语六级词汇书', '书页完整，有少量标记。', 15.00, '外语楼门口', 'ON_SALE'),
+(4, 1, '计算机网络教材', '适合计科专业，附赠思维导图。', 30.00, '图书馆南门', 'ON_SALE'),
+(4, 1, '考研高数真题册', '近十年真题，做过少量铅笔笔记。', 22.00, '宿舍楼下', 'ON_SALE'),
+(4, 1, 'Python 入门书籍', '适合零基础，内容较新。', 26.00, '一食堂门口', 'ON_SALE'),
+(4, 1, '数据结构习题集', '题型全，适合刷题。', 19.00, '教学楼 B 区', 'ON_SALE'),
+(4, 1, '线性代数教材', '教材八成新，封面轻微磨损。', 20.00, '图书馆东门', 'ON_SALE'),
+(4, 1, '操作系统课程笔记', '电子版打印，重点标注清晰。', 12.00, '宿舍区快递柜', 'ON_SALE'),
+(6, 2, '蓝牙降噪耳机', '续航正常，适合自习和通勤。', 168.00, '一食堂门口', 'ON_SALE'),
+(6, 2, '二手平板支架', '铝合金材质，桌面使用稳定。', 35.00, '图书馆南门', 'ON_SALE'),
+(6, 2, 'USB 扩展坞', '支持 HDMI 和多 USB 接口。', 42.00, '教学楼 A 区', 'ON_SALE'),
+(6, 2, '便携机械键盘', '68 键配列，适合宿舍桌搭。', 99.00, '宿舍楼下', 'ON_SALE'),
+(6, 2, '二手显示器支架', '可升降旋转，配件齐全。', 88.00, '理工楼门口', 'ON_SALE'),
+(6, 2, '无线鼠标', '静音按键，办公自习都适合。', 26.00, '图书馆一楼', 'ON_SALE'),
+(6, 2, '移动硬盘 1TB', '已格式化，无坏道。', 210.00, '校门口咖啡店', 'ON_SALE'),
+(6, 2, '二手小米手环', '功能正常，适合运动记录。', 55.00, '操场西门', 'ON_SALE'),
+(6, 2, '手机桌面支架', '折叠便携，适合宿舍追剧。', 14.00, '宿舍楼下快递点', 'ON_SALE'),
+(6, 2, '罗技摄像头', '网课视频清晰，支持 USB 直连。', 79.00, '信息楼门口', 'ON_SALE'),
+(1, 3, '收纳箱三件套', '适合宿舍衣物和零食整理。', 32.00, '宿舍楼下', 'ON_SALE'),
+(1, 3, '台灯', '亮度可调，适合晚间学习。', 40.00, '图书馆南门', 'ON_SALE'),
+(1, 3, '靠背椅坐垫', '久坐不累，清洗方便。', 18.00, '一食堂门口', 'ON_SALE'),
+(1, 3, '便携热水壶', '容量适中，功能正常。', 45.00, '宿舍区快递柜', 'ON_SALE'),
+(1, 3, '床上书桌', '折叠款，适合宿舍使用。', 52.00, '宿舍楼下', 'ON_SALE'),
+(1, 3, '全身镜', '镜面完好，搬宿舍转让。', 30.00, '女生宿舍楼下', 'ON_SALE'),
+(1, 3, '保温饭盒', '适合带饭，密封效果好。', 21.00, '教学楼 B 区', 'ON_SALE'),
+(1, 3, '小型加湿器', '静音运行，适合宿舍。', 28.00, '图书馆东门', 'ON_SALE'),
+(1, 3, '棉麻脏衣篮', '可折叠，空间占用小。', 16.00, '宿舍区洗衣房', 'ON_SALE'),
+(1, 3, '电吹风', '冷热风正常，成色较新。', 39.00, '宿舍楼下快递点', 'ON_SALE'),
+(5, 4, '羽毛球拍', '适合新手，带拍套。', 68.00, '体育馆门口', 'ON_SALE'),
+(5, 4, '瑜伽垫', '厚度适中，表面干净。', 29.00, '操场西门', 'ON_SALE'),
+(5, 4, '哑铃一对', '每只 5kg，自提优先。', 80.00, '健身房门口', 'ON_SALE'),
+(5, 4, '篮球', '七成新，气压正常。', 36.00, '篮球场旁', 'ON_SALE'),
+(5, 4, '跑步腰包', '适合夜跑，带反光条。', 15.00, '操场西门', 'ON_SALE'),
+(5, 4, '护膝', '适合篮球和跑步使用。', 22.00, '体育馆门口', 'ON_SALE'),
+(5, 4, '跳绳', '计数款，适合减脂训练。', 18.00, '操场南门', 'ON_SALE'),
+(5, 4, '露营折叠椅', '适合郊游和操场看比赛。', 48.00, '校门口', 'ON_SALE'),
+(5, 4, '登山水壶', '轻便耐摔，容量大。', 24.00, '操场西门', 'ON_SALE'),
+(5, 4, '网球拍', '拍线完整，适合入门。', 72.00, '体育馆门口', 'ON_SALE'),
+(4, 5, '护手霜套装', '冬天宿舍必备，未拆封。', 25.00, '女生宿舍楼下', 'ON_SALE'),
+(4, 5, '洗发水囤货装', '大瓶装，转手给同学。', 38.00, '宿舍区超市门口', 'ON_SALE'),
+(4, 5, '化妆刷九件套', '清洗过，适合新手。', 32.00, '图书馆东门', 'ON_SALE'),
+(4, 5, '补水面膜一盒', '全新未拆，保质期充足。', 45.00, '女生宿舍楼下', 'ON_SALE'),
+(4, 5, '便携收纳化妆包', '分层多，适合出行。', 19.00, '一食堂门口', 'ON_SALE'),
+(4, 5, '身体乳', '味道清淡，剩余约八成。', 20.00, '宿舍楼下快递点', 'ON_SALE'),
+(6, 6, '自行车头盔', '成色新，适合校园通勤。', 58.00, '校门口咖啡店', 'ON_SALE'),
+(6, 6, '共享单车月卡转让', '剩余 20 天，低价转。', 12.00, '校门口', 'ON_SALE'),
+(6, 6, '滑板', '适合代步，轮子顺滑。', 95.00, '操场南门', 'ON_SALE'),
+(6, 6, '自行车 U 型锁', '结实耐用，适合宿舍区停放。', 23.00, '宿舍区车棚', 'ON_SALE'),
+(6, 6, '电动车手机支架', '导航方便，安装简单。', 17.00, '信息楼门口', 'ON_SALE'),
+(6, 6, '骑行手套', '透气防滑，适合长距离骑行。', 26.00, '校门口咖啡店', 'ON_SALE');
 
-INSERT INTO `product_image` (
+INSERT INTO `product_image` (`product_id`, `image_url`, `sort_order`) VALUES
+(1, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-1', 0),
+(2, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-2', 0),
+(3, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-3', 0),
+(4, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-4', 0),
+(5, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-5', 0),
+(6, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-6', 0),
+(7, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-7', 0),
+(8, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-8', 0),
+(9, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-9', 0),
+(10, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-10', 0),
+(11, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-11', 0),
+(12, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book-12', 0),
+(13, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-13', 0),
+(14, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-14', 0),
+(15, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-15', 0),
+(16, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-16', 0),
+(17, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-17', 0),
+(18, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-18', 0),
+(19, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-19', 0),
+(20, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-20', 0),
+(21, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-21', 0),
+(22, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Digital-22', 0),
+(23, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-23', 0),
+(24, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-24', 0),
+(25, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-25', 0),
+(26, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-26', 0),
+(27, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-27', 0),
+(28, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-28', 0),
+(29, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-29', 0),
+(30, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-30', 0),
+(31, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-31', 0),
+(32, 'https://dummyimage.com/360x240/dcfce7/047857&text=Life-32', 0),
+(33, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-33', 0),
+(34, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-34', 0),
+(35, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-35', 0),
+(36, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-36', 0),
+(37, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-37', 0),
+(38, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-38', 0),
+(39, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-39', 0),
+(40, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-40', 0),
+(41, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-41', 0),
+(42, 'https://dummyimage.com/360x240/fef3c7/b45309&text=Sport-42', 0),
+(43, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-43', 0),
+(44, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-44', 0),
+(45, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-45', 0),
+(46, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-46', 0),
+(47, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-47', 0),
+(48, 'https://dummyimage.com/360x240/fce7f3/be185d&text=Beauty-48', 0),
+(49, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-49', 0),
+(50, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-50', 0),
+(51, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-51', 0),
+(52, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-52', 0),
+(53, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-53', 0),
+(54, 'https://dummyimage.com/360x240/e0e7ff/4338ca&text=Travel-54', 0);
+
+INSERT INTO `order_info` (
   `product_id`,
-  `image_url`,
-  `sort_order`
+  `buyer_id`,
+  `seller_id`,
+  `order_amount`,
+  `order_status`,
+  `trade_method`,
+  `trade_location`,
+  `buyer_note`,
+  `finish_time`
 ) VALUES
-(1, 'https://dummyimage.com/360x240/dbeafe/1d4ed8&text=Book', 0),
-(2, 'https://dummyimage.com/360x240/e0f2fe/0369a1&text=Keyboard', 0),
-(3, 'https://dummyimage.com/360x240/dcfce7/047857&text=Fan', 0);
+(4, 3, 4, 28.00, 'COMPLETED', 'offline', '图书馆一楼', '准备期末复习', NOW()),
+(5, 3, 4, 18.00, 'COMPLETED', 'offline', '教学楼 A 区', '顺便拿资料', NOW()),
+(13, 3, 6, 168.00, 'COMPLETED', 'offline', '一食堂门口', '想要降噪耳机', NOW()),
+(14, 4, 6, 35.00, 'COMPLETED', 'offline', '图书馆南门', '放宿舍用', NOW()),
+(23, 4, 1, 32.00, 'COMPLETED', 'offline', '宿舍楼下', '刚好需要收纳', NOW()),
+(24, 4, 1, 40.00, 'COMPLETED', 'offline', '图书馆南门', '台灯自提', NOW()),
+(33, 6, 5, 68.00, 'COMPLETED', 'offline', '体育馆门口', '自己买来送同学', NOW()),
+(34, 6, 5, 29.00, 'COMPLETED', 'offline', '操场西门', '瑜伽垫想试试', NOW()),
+(49, 5, 6, 58.00, 'COMPLETED', 'offline', '校门口咖啡店', '通勤骑车用', NOW()),
+(50, 5, 6, 12.00, 'PENDING', 'offline', '校门口', '月卡转让还在沟通', NULL),
+(43, 4, 4, 25.00, 'COMPLETED', 'offline', '女生宿舍楼下', '护手霜正好需要', NOW()),
+(19, 3, 6, 210.00, 'PENDING', 'offline', '校门口咖啡店', '需要验货后购买', NULL);
+
+INSERT INTO `favorite` (`user_id`, `product_id`) VALUES
+(3, 4), (3, 5), (3, 13), (3, 16), (3, 18),
+(4, 23), (4, 24), (4, 27), (4, 43), (4, 46),
+(5, 33), (5, 34), (5, 38), (5, 49), (5, 53),
+(6, 13), (6, 17), (6, 19), (6, 33), (6, 49);
+
+INSERT INTO `browse_history` (`user_id`, `product_id`) VALUES
+(3, 4), (3, 6), (3, 7), (3, 13), (3, 15), (3, 18), (3, 21),
+(4, 23), (4, 24), (4, 26), (4, 29), (4, 43), (4, 45), (4, 47),
+(5, 33), (5, 35), (5, 37), (5, 39), (5, 49), (5, 51), (5, 54),
+(6, 13), (6, 16), (6, 17), (6, 19), (6, 20), (6, 49), (6, 52);
+
+INSERT INTO `notification` (`receiver_id`, `content`) VALUES
+(4, '系统提醒：有同学对你发布的教材资料商品产生了购买意向。'),
+(6, '系统提醒：你的数码产品近期收藏热度较高。'),
+(5, '系统提醒：你的运动户外类商品被相似兴趣用户关注。');
