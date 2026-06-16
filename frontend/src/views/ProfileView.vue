@@ -22,8 +22,16 @@
             <strong>{{ authState.user?.role || '-' }}</strong>
           </div>
           <div class="meta-item">
+            <span class="meta-label">账号状态</span>
+            <span class="tag" :class="statusTagClass">{{ formatUserStatus(authState.user?.status) }}</span>
+          </div>
+          <div class="meta-item">
             <span class="meta-label">信誉分</span>
             <strong>{{ authState.user?.credit_score ?? '-' }}</strong>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">风险等级</span>
+            <span class="tag" :class="riskTagClass">{{ formatRiskLevel(accountStatus?.risk_level) }}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">注册时间</span>
@@ -91,11 +99,12 @@
         </h3>
 
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
-          <p class="muted-text" style="font-size:13px; margin:0;">动态拉取自数据库的通知数据，包含买家购物意向等系统状态。</p>
+          <p class="muted-text" style="font-size:13px; margin:0;">动态拉取账号状态、计算信誉分和通知数据，包含买家购物意向与管理员处理等系统状态。</p>
           <div>
-            <button class="muted-btn" @click="loadMyNotifications" style="padding:6px 10px; border-radius:6px; margin-left:8px;">刷新通知</button>
+            <button class="muted-btn" @click="refreshAllData" style="padding:6px 10px; border-radius:6px; margin-left:8px;">刷新状态</button>
           </div>
         </div>
+        <p v-if="statusNotice" class="form-error" style="margin-bottom: 12px;">{{ statusNotice }}</p>
 
         <div v-if="notifications.length === 0" style="color: #bbb; text-align: center; padding: 20px;">
           暂无新通知，若您确认有新订单请点击右上角“刷新通知”或稍后再试。
@@ -150,14 +159,13 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch, onUnmounted } from 'vue'
+import { computed, onMounted, reactive, ref, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { fetchFavorites, fetchNotifications } from '../api/social'
-import { deleteFavorite } from '../api/social'
+import { deleteFavorite, fetchFavorites } from '../api/social'
 import { useAuth } from '../composables/useAuth'
 
-const { authState, fetchMe, updateProfile } = useAuth()
+const { authState, fetchAccountStatus, fetchMe, updateProfile } = useAuth()
 const route = useRoute()
 
 const form = reactive({
@@ -174,7 +182,26 @@ const successMessage = ref('')
 const errorMessage = ref('')
 const myFavorites = ref([])
 const notifications = ref([])
+const accountStatus = ref(null)
 const _notificationsPoll = ref(null)
+
+const statusNotice = computed(() => {
+  if (authState.user?.status === 'blocked') {
+    return '你的账号已被管理员拉黑，普通交易功能将被限制。'
+  }
+  if (accountStatus.value?.warning_reasons?.length) {
+    return `当前账号存在风险提示：${accountStatus.value.warning_reasons.join('、')}`
+  }
+  return ''
+})
+
+const statusTagClass = computed(() => (
+  authState.user?.status === 'blocked' ? 'tag-danger' : 'tag-incoming'
+))
+
+const riskTagClass = computed(() => (
+  { LOW: 'tag-incoming', MEDIUM: 'tag-warning', HIGH: 'tag-danger' }[accountStatus.value?.risk_level] || ''
+))
 
 function syncForm() {
   form.user_name = authState.user?.user_name || ''
@@ -190,6 +217,14 @@ function formatDate(value) {
     return '-'
   }
   return new Date(value).toLocaleString('zh-CN')
+}
+
+function formatUserStatus(status) {
+  return ({ active: '正常', blocked: '已拉黑', disabled: '已禁用' }[status] || status || '-')
+}
+
+function formatRiskLevel(level) {
+  return ({ LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' }[level] || '-')
 }
 
 async function loadMyPrivateFavorites() {
@@ -210,11 +245,11 @@ async function loadMyNotifications() {
     return
   }
   try {
-    const data = await fetchNotifications()
-    notifications.value = data
-    console.log('Loaded notifications:', notifications.value)
+    const status = await fetchAccountStatus()
+    accountStatus.value = status
+    notifications.value = status?.notifications || []
   } catch (error) {
-    console.error('获取通知失败:', error)
+    console.error('获取个人中心状态失败:', error)
   }
 }
 
@@ -238,6 +273,7 @@ async function handleUpdate() {
   errorMessage.value = ''
   try {
     await updateProfile({ ...form })
+    await refreshAllData()
     syncForm()
     successMessage.value = '个人资料已更新'
   } catch (error) {
@@ -273,12 +309,18 @@ watch(
 
 watch(
   () => authState.user,
-  async () => {
+  () => {
     syncForm()
-    await refreshAllData()
-    startNotificationsPoll()
   },
   { deep: true }
+)
+
+watch(
+  () => authState.user?.user_id,
+  async () => {
+    await refreshAllData()
+    startNotificationsPoll()
+  }
 )
 
 function startNotificationsPoll() {
@@ -288,7 +330,7 @@ function startNotificationsPoll() {
     if (route.path !== '/profile' || !authState.user?.user_id) return
     _notificationsPoll.value = setInterval(async () => {
       try {
-        await loadMyNotifications()
+        await refreshAllData()
       } catch (err) {
         console.error('通知轮询失败', err)
       }

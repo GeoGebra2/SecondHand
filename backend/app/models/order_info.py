@@ -21,6 +21,12 @@ class OrderInfo(Base):
     trade_location: Mapped[str] = mapped_column(String(100))
     buyer_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     cancel_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cancel_user_id: Mapped[int | None] = mapped_column(
+        BIGINT_ID,
+        ForeignKey('user.user_id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
     create_time: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     update_time: Mapped[datetime] = mapped_column(
         DateTime,

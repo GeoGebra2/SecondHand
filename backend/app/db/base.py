@@ -4,6 +4,19 @@ from app.models.product import Category, Product, ProductImage
 from app.models.recommendation import BrowseHistory
 from app.models.review import Review
 from app.models.social import Favorite, Notification
+from app.models.user_report import UserReport
 from app.models.user import User
 
-__all__ = ['Base', 'User', 'Category', 'Product', 'ProductImage', 'OrderInfo', 'Review', 'Favorite', 'Notification', 'BrowseHistory']
+__all__ = [
+    'Base',
+    'User',
+    'Category',
+    'Product',
+    'ProductImage',
+    'OrderInfo',
+    'Review',
+    'Favorite',
+    'Notification',
+    'BrowseHistory',
+    'UserReport',
+]

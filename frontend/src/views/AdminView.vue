@@ -48,13 +48,124 @@
         </ul>
       </article>
     </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3>用户信用评估</h3>
+        <button class="secondary-btn" :disabled="loading" type="button" @click="loadAdminData">
+          {{ loading ? '刷新中...' : '刷新分析' }}
+        </button>
+      </div>
+      <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>用户</th>
+            <th>状态</th>
+            <th>信用等级</th>
+            <th>风险等级</th>
+            <th>计算分</th>
+            <th>责任取消率</th>
+            <th>卖家评分</th>
+            <th>举报次数</th>
+            <th>预警原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="analysis in creditAnalyses" :key="analysis.user_id">
+            <td>
+              <strong>{{ analysis.user_name }}</strong>
+              <p class="table-subtitle">{{ analysis.email }}</p>
+            </td>
+            <td><span class="tag" :class="statusTagClass(analysis.status)">{{ formatUserStatus(analysis.status) }}</span></td>
+            <td><span class="tag">{{ analysis.credit_level }}</span></td>
+            <td><span class="tag" :class="riskTagClass(analysis.risk_level)">{{ formatRiskLevel(analysis.risk_level) }}</span></td>
+            <td>{{ analysis.computed_score }}</td>
+            <td>{{ formatPercent(analysis.metrics.responsible_cancellation_rate) }}</td>
+            <td>{{ analysis.metrics.average_seller_review_score ?? '暂无' }}</td>
+            <td>{{ analysis.metrics.report_count }}</td>
+            <td>
+              <span v-if="!analysis.warning_reasons.length" class="muted-text">无</span>
+              <div v-else class="review-list">
+                <span v-for="reason in analysis.warning_reasons" :key="reason" class="tag tag-outgoing">
+                  {{ reason }}
+                </span>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!creditAnalyses.length && !loading">
+            <td colspan="9" class="muted-text">暂无信用分析数据</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3>用户举报记录</h3>
+        <span class="muted-text">共 {{ userReports.length }} 条</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>被举报用户</th>
+            <th>举报人</th>
+            <th>原因</th>
+            <th>说明</th>
+            <th>时间</th>
+            <th>当前状态</th>
+            <th>处理</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="report in userReports" :key="report.report_id">
+            <td>
+              <strong>{{ report.reported_user_name }}</strong>
+              <p class="table-subtitle">ID: {{ report.reported_user_id }}</p>
+            </td>
+            <td>{{ report.reporter_name }}</td>
+            <td>{{ report.reason }}</td>
+            <td>{{ report.description || '无' }}</td>
+            <td>{{ formatDate(report.create_time) }}</td>
+            <td>
+              <span class="tag" :class="statusTagClass(findUserStatus(report.reported_user_id))">
+                {{ formatUserStatus(findUserStatus(report.reported_user_id)) }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button
+                  v-if="findUserStatus(report.reported_user_id) !== 'blocked'"
+                  class="secondary-btn"
+                  type="button"
+                  @click="handleBlockUser(report.reported_user_id)"
+                >
+                  拉黑
+                </button>
+                <button
+                  v-else
+                  class="secondary-btn"
+                  type="button"
+                  @click="handleUnblockUser(report.reported_user_id)"
+                >
+                  恢复
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!userReports.length && !loading">
+            <td colspan="7" class="muted-text">暂无用户举报记录</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
 
-import { fetchAdminDashboard } from '../api/social'
+import { blockUser, fetchAdminDashboard, fetchCreditAnalysis, fetchUserReports, unblockUser } from '../api/admin'
 
 const stats = ref({
   pending_product_count: 0,
@@ -64,12 +175,75 @@ const stats = ref({
   users: [],
   trends: [],
 })
+const creditAnalyses = ref([])
+const userReports = ref([])
+const loading = ref(false)
+const errorMessage = ref('')
 
-onMounted(async () => {
+function formatPercent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`
+}
+
+function formatRiskLevel(level) {
+  return ({ LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' }[level] || level || '-')
+}
+
+function riskTagClass(level) {
+  return ({ LOW: 'tag-incoming', MEDIUM: 'tag-warning', HIGH: 'tag-danger' }[level] || '')
+}
+
+function formatUserStatus(status) {
+  return ({ active: '正常', blocked: '已拉黑', disabled: '已禁用' }[status] || status || '未知')
+}
+
+function statusTagClass(status) {
+  return status === 'blocked' || status === 'disabled' ? 'tag-danger' : 'tag-incoming'
+}
+
+function findUserStatus(userId) {
+  return creditAnalyses.value.find((item) => item.user_id === userId)?.status || '未知'
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString('zh-CN') : '-'
+}
+
+async function loadAdminData() {
+  loading.value = true
+  errorMessage.value = ''
   try {
-    stats.value = await fetchAdminDashboard()
+    const [dashboard, analyses, reports] = await Promise.all([
+      fetchAdminDashboard(),
+      fetchCreditAnalysis(),
+      fetchUserReports(),
+    ])
+    stats.value = dashboard
+    creditAnalyses.value = analyses
+    userReports.value = reports
   } catch (error) {
-    console.error('获取后端数据失败，请确认后端 uvicorn 正在运行:', error)
+    errorMessage.value = error.response?.data?.detail || '获取后端数据失败，请确认后端 uvicorn 正在运行'
+  } finally {
+    loading.value = false
   }
-})
+}
+
+async function handleBlockUser(userId) {
+  try {
+    await blockUser(userId)
+    await loadAdminData()
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '拉黑用户失败'
+  }
+}
+
+async function handleUnblockUser(userId) {
+  try {
+    await unblockUser(userId)
+    await loadAdminData()
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '恢复用户失败'
+  }
+}
+
+onMounted(loadAdminData)
 </script>

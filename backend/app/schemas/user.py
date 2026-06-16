@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.social import NotificationResponse
+
 
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -21,6 +23,15 @@ class UserProfileResponse(BaseModel):
     create_time: datetime
     update_time: datetime
     last_login_time: datetime | None = None
+
+
+class UserStatusResponse(BaseModel):
+    user: UserProfileResponse
+    computed_score: int
+    credit_level: str
+    risk_level: str
+    warning_reasons: list[str]
+    notifications: list[NotificationResponse]
 
 
 class UserProfileUpdateRequest(BaseModel):

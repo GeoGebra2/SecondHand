@@ -45,6 +45,11 @@ export async function fetchCategories(params = {}) {
   return response.data.data
 }
 
+export async function fetchSellerRiskProfile(sellerId) {
+  const response = await http.get(`/products/sellers/${sellerId}/risk-profile`)
+  return response.data.data
+}
+
 export async function createCategory(payload) {
   const response = await http.post('/products/categories', payload)
   return response.data.data
