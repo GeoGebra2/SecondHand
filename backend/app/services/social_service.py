@@ -119,18 +119,20 @@ class SocialService:
             return results
 
     def get_dashboard_stats(self, db: Session) -> DashboardStatsResponse:
+        # Use scalar subqueries to avoid row duplication caused by joins
+        pub_count_sq = select(func.count(Product.product_id)).where(Product.category_id == Category.category_id).scalar_subquery()
+        total_revenue_sq = select(func.coalesce(func.sum(Product.price), 0)).where(Product.category_id == Category.category_id).scalar_subquery()
+        fav_count_sq = select(func.count(Favorite.favorite_id)).select_from(Favorite).join(Product, Product.product_id == Favorite.product_id).where(Product.category_id == Category.category_id).scalar_subquery()
+
         category_rows = db.execute(
             select(
                 Category.category_id,
                 Category.category_name,
-                func.count(func.distinct(Product.product_id)).label('pub_count'),
-                func.coalesce(func.sum(func.distinct(Product.price)), 0).label('total_revenue'),
-                func.count(Favorite.favorite_id).label('fav_count'),
+                pub_count_sq.label('pub_count'),
+                total_revenue_sq.label('total_revenue'),
+                fav_count_sq.label('fav_count'),
             )
             .select_from(Category)
-            .join(Product, Product.category_id == Category.category_id, isouter=True)
-            .join(Favorite, Favorite.product_id == Product.product_id, isouter=True)
-            .group_by(Category.category_id, Category.category_name)
             .order_by(Category.category_name.asc())
         ).all()
 
@@ -138,6 +140,7 @@ class SocialService:
             CategoryHeatmapItem(
                 category_id=category_id,
                 category_name=category_name,
+                # sales_count uses published product count plus favorites as a simple popularity proxy
                 sales_count=int((pub_count or 0) + (fav_count or 0)),
                 total_revenue=int(total_revenue or 0),
             )
@@ -183,7 +186,7 @@ class SocialService:
         users = db.scalars(select(User).order_by(User.user_id.asc())).all()
         if not users:
             return []
-
+        # Counts of published products per user
         product_counts = {
             user_id: count
             for user_id, count in db.execute(
@@ -191,11 +194,21 @@ class SocialService:
                 .group_by(Product.seller_id)
             ).all()
         }
+        # Counts of favorites made by each user
         favorite_counts = {
             user_id: count
             for user_id, count in db.execute(
                 select(Favorite.user_id, func.count(Favorite.favorite_id))
                 .group_by(Favorite.user_id)
+            ).all()
+        }
+        # Counts of completed sales (orders completed) per seller
+        completed_sales = {
+            seller_id: count
+            for seller_id, count in db.execute(
+                select(OrderInfo.seller_id, func.count(OrderInfo.order_id))
+                .where(OrderInfo.order_status == 'COMPLETED')
+                .group_by(OrderInfo.seller_id)
             ).all()
         }
 
@@ -207,8 +220,15 @@ class SocialService:
                 last_login = user.last_login_time.replace(tzinfo=None) if user.last_login_time.tzinfo else user.last_login_time
                 if (now - last_login).days <= 7:
                     recent_bonus = 50
-            action_count = product_counts.get(user.user_id, 0) * 20 + favorite_counts.get(user.user_id, 0) * 10 + recent_bonus
-            ranked.append(ActiveUserItem(user_name=user.user_name, action_count=int(action_count)))
+
+            # Score weights (tunable)
+            score = 0
+            score += product_counts.get(user.user_id, 0) * 25        # publishes have high weight
+            score += completed_sales.get(user.user_id, 0) * 30       # completed sales highest weight
+            score += favorite_counts.get(user.user_id, 0) * 10       # favorites (user activity)
+            score += recent_bonus
+
+            ranked.append(ActiveUserItem(user_name=user.user_name, action_count=int(score)))
 
         ranked.sort(key=lambda item: item.action_count, reverse=True)
         return ranked[:5]

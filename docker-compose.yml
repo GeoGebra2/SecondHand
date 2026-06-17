@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     container_name: secondhand-mysql
     restart: unless-stopped
     command:
@@ -17,11 +17,15 @@ services:
       - secondhand_mysql_data_v2:/var/lib/mysql
       - ./database/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-u', 'secondhand_user', '-psecondhand123']
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u root -proot123456 || exit 1']
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
+
+  # migrate service removed to simplify developer flow. Use the provided
+  # idempotent SQL in database/mysql/init or run manual SQL against the
+  # running container when updating an existing database volume.
 
 volumes:
   secondhand_mysql_data_v2:

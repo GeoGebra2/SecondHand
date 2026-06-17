@@ -42,8 +42,16 @@ SecondHand/
 
 - `user`
 - `category`
-- `product`
-- `product_image`
+注意：初始化脚本（`database/mysql/init/*`）只会在数据库数据卷为空时由 MySQL 容器的
+`docker-entrypoint-initdb.d` 自动执行（也就是首次启动时）。如果该卷已经存在，
+这些脚本将不会被重复执行。对于增量模式，仓库内的 `database/mysql/migrations` 文件夹
+存放可运行的迁移脚本。启动数据库后，请运行：
+
+```powershell
+docker-compose run --rm migrate
+```
+
+这样可以确保所有仓库中新增的表结构或数据修复脚本被应用到本地数据库。
 - `order_info`
 - `review`
 - `favorite`
