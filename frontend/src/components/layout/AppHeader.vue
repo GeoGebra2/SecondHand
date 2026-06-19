@@ -14,9 +14,6 @@
         <RouterLink class="header-chip header-link" to="/login">登录</RouterLink>
         <RouterLink class="header-chip header-link" to="/register">注册</RouterLink>
       </template>
-      <span class="header-chip">Vue 3</span>
-      <span class="header-chip">FastAPI</span>
-      <span class="header-chip">MySQL Ready</span>
     </div>
   </header>
 </template>

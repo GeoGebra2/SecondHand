@@ -6,12 +6,12 @@
     </div>
 
     <div class="section-card">
-      <div class="filter-grid">
-        <label class="form-field">
+      <div class="filter-grid products-filter-grid">
+        <label class="form-field filter-block">
           <span>关键字</span>
           <input v-model.trim="filters.keyword" type="search" placeholder="搜索标题或描述" @keyup.enter="loadProducts" />
         </label>
-        <label class="form-field">
+        <label class="form-field filter-block">
           <span>分类</span>
           <select v-model="filters.category_id" @change="loadProducts">
             <option value="">全部分类</option>
@@ -20,15 +20,15 @@
             </option>
           </select>
         </label>
-        <label class="form-field">
+        <label class="form-field filter-block">
           <span>最低价格</span>
           <input v-model="filters.min_price" min="0" type="number" placeholder="0" @blur="loadProducts" @keyup.enter="loadProducts" />
         </label>
-        <label class="form-field">
+        <label class="form-field filter-block">
           <span>最高价格</span>
           <input v-model="filters.max_price" min="0" type="number" placeholder="不限" @blur="loadProducts" @keyup.enter="loadProducts" />
         </label>
-        <label class="form-field">
+        <label class="form-field filter-block">
           <span>排序规则</span>
           <select v-model="sortRule" @change="loadProducts">
             <option value="publish_time_desc">最新发布</option>
@@ -53,7 +53,17 @@
       </div>
       <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
       <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-      <table class="data-table">
+      <table class="data-table products-table">
+        <colgroup>
+          <col style="width: 84px;" />
+          <col style="width: 220px;" />
+          <col style="width: 82px;" />
+          <col style="width: 84px;" />
+          <col style="width: 72px;" />
+          <col style="width: 64px;" />
+          <col style="width: 116px;" />
+          <col style="width: 126px;" />
+        </colgroup>
         <thead>
           <tr>
             <th>图片</th>
@@ -78,34 +88,34 @@
             <td>{{ product.category_name }}</td>
             <td>{{ formatPrice(product.price) }}</td>
             <td>{{ product.seller_name }}</td>
-            <td><span class="tag">{{ formatProductStatus(product.status) }}</span></td>
+            <td class="status-cell"><span class="tag status-tag">{{ formatProductStatus(product.status) }}</span></td>
             <td>{{ product.trade_location }}</td>
             <td>
-              <button
-                class="primary-btn"
-                :disabled="isSubmitting(product) || !canCreateOrder(product)"
-                type="button"
-                @click="handleCreateOrder(product)"
-              >
-                {{ isSubmitting(product) ? '下单中...' : orderButtonText(product) }}
-              </button>
+              <div class="product-actions">
+                <button
+                  class="primary-btn compact-btn"
+                  :disabled="isSubmitting(product) || !canCreateOrder(product)"
+                  type="button"
+                  @click="handleCreateOrder(product)"
+                >
+                  {{ isSubmitting(product) ? '下单中...' : orderButtonText(product) }}
+                </button>
 
-              <button
-                class="secondary-btn"
-                style="margin-left: 8px; background-color: #f59e0b; color: white; border: none;"
-                type="button"
-                @click="handleMyFavorite(product.product_id)"
-              >
-                收藏
-              </button>
-              <button
-                class="secondary-btn"
-                style="margin-left: 8px;"
-                type="button"
-                @click="handleReportSeller(product)"
-              >
-                举报卖家
-              </button>
+                <button
+                  class="secondary-btn compact-btn favorite-btn"
+                  type="button"
+                  @click="handleMyFavorite(product.product_id)"
+                >
+                  收藏
+                </button>
+                <button
+                  class="secondary-btn compact-btn"
+                  type="button"
+                  @click="handleReportSeller(product)"
+                >
+                  举报
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="!products.length && !loading">
@@ -241,7 +251,7 @@ function canCreateOrder(product) {
 
 function orderButtonText(product) {
   if (!isAuthenticated.value) {
-    return '请先登录'
+    return '登录'
   }
   if (authState.user?.user_id === product.seller_id) {
     return '自己发布'
