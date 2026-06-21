@@ -4,6 +4,8 @@
 
 项目重点不只是页面展示，而是通过一个真实业务场景体现数据库课程中的需求分析、关系建模、外键约束、索引设计、事务控制、统计查询与接口测试能力。
 
+本项目报告位于"docs\校园二手交易平台数据库管理系统-大作业报告.md"。
+
 ## 已实现功能
 
 - 用户注册、登录、退出登录、个人资料查看与更新
@@ -42,21 +44,18 @@ SecondHand/
 
 - `user`
 - `category`
-注意：初始化脚本（`database/mysql/init/*`）只会在数据库数据卷为空时由 MySQL 容器的
-`docker-entrypoint-initdb.d` 自动执行（也就是首次启动时）。如果该卷已经存在，
-这些脚本将不会被重复执行。对于增量模式，仓库内的 `database/mysql/migrations` 文件夹
-存放可运行的迁移脚本。启动数据库后，请运行：
-
-```powershell
-docker-compose run --rm migrate
-```
-
-这样可以确保所有仓库中新增的表结构或数据修复脚本被应用到本地数据库。
+- `product`
+- `product_image`
 - `order_info`
 - `review`
 - `favorite`
 - `notification`
 - `browse_history`
+- `user_report`
+
+注意：初始化脚本（`database/mysql/init/*`）只会在数据库数据卷为空时由 MySQL 容器的
+`docker-entrypoint-initdb.d` 自动执行，也就是首次启动时自动导入。如果该数据卷已经存在，
+这些脚本不会重复执行；此时如需同步结构或种子数据变更，请删除旧数据卷后重新初始化数据库。
 
 其中商品与分类采用外键设计：
 
@@ -89,6 +88,13 @@ docker compose up -d mysql
 
 - 学生账号：`student@campus.edu` / `student123`
 - 管理员账号：`admin@campus.edu` / `admin12345`
+
+其余 4 个演示学生账号：
+
+- `liming@campus.edu` / `student123`
+- `wangxue@campus.edu` / `student123`
+- `chentao@campus.edu` / `student123`
+- `zhaoqing@campus.edu` / `student123`
 
 初始化种子数据额外包含：
 
@@ -142,7 +148,9 @@ npm run dev
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+- `GET /api/auth/me/status`
 - `PUT /api/auth/me`
+- `POST /api/auth/logout`
 
 商品与分类：
 
@@ -153,6 +161,7 @@ npm run dev
 - `PATCH /api/products/{product_id}/offline`
 - `PATCH /api/products/{product_id}/relist`
 - `GET /api/products/categories`
+- `GET /api/products/sellers/{seller_id}/risk-profile`
 - `POST /api/products/categories`
 - `PUT /api/products/categories/{category_id}`
 
@@ -170,11 +179,17 @@ npm run dev
 
 - `GET /api/favorites`
 - `POST /api/favorites`
+- `DELETE /api/favorites/{product_id}`
 - `GET /api/notifications`
 - `POST /api/notifications`
+- `POST /api/reports/users`
 - `GET /api/recommendations`
 - `POST /api/recommendations/browse-history`
 - `GET /api/admin/dashboard`
+- `GET /api/admin/reports`
+- `GET /api/admin/credit-analysis`
+- `PATCH /api/admin/users/{user_id}/block`
+- `PATCH /api/admin/users/{user_id}/unblock`
 
 推荐接口说明：
 
@@ -188,12 +203,19 @@ npm run dev
 在 `backend` 目录下运行：
 
 ```bash
-.venv\Scripts\python.exe -m pytest tests\test_recommendation_api.py tests\test_product_api.py tests\test_social_api.py
+.venv\Scripts\python.exe -m pytest
 ```
 
-当前结果：
+当前仓库已包含以下测试文件：
 
-- `13 passed`
+- `test_auth_api.py`
+- `test_credit_report_api.py`
+- `test_order_api.py`
+- `test_product_api.py`
+- `test_profile_api.py`
+- `test_recommendation_api.py`
+- `test_review_api.py`
+- `test_social_api.py`
 
 ## 项目亮点
 
@@ -213,7 +235,3 @@ npm run dev
 docker compose down -v
 docker compose up -d mysql
 ```
-
-如需提交课程成果，建议配合仓库中的报告文档：
-
-- `docs/校园二手交易平台数据库管理系统-大作业报告.md`
